@@ -83,6 +83,12 @@
         .task-card { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
         .task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(79,70,229,0.12); }
         .task-card:active { transform: scale(0.98); }
+        
+        /* Custom pastel backgrounds for Monthly Journal */
+        .bg-pastel-green { background-color: #f1f8e9; border: 1px solid #dcedc8; }
+        .bg-pastel-brown { background-color: #efebe9; border: 1px solid #d7ccc8; }
+        .bg-pastel-blue { background-color: #e0f7fa; border: 1px solid #b2ebf2; }
+        .bg-pastel-pink { background-color: #fce4ec; border: 1px solid #f8bbd0; }
     </style>
 </head>
 <body>
@@ -170,7 +176,6 @@
             return '🟡 ปานกลาง';
         };
 
-        // Time-based greeting & bg
         const getTimeContext = () => {
             const h = new Date().getHours();
             if (h >= 5 && h < 12) return { greeting: 'อรุณสวัสดิ์', bgCls: 'morning-bg', textCls: 'text-amber-900', emoji: '🌅' };
@@ -205,7 +210,9 @@
                 x: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
                 chevronRight: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
                 bell: "M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z",
-                layers: "M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"
+                layers: "M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z",
+                save: "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
+                check: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
             };
             return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}><path d={paths[name] || ""} /></svg>;
         };
@@ -234,9 +241,16 @@
             const [selectedAssignees, setSelectedAssignees] = useState([]);
             const [testStatus, setTestStatus] = useState('ทดสอบแจ้งเตือน');
 
-            const timeCtx = useMemo(() => getTimeContext(), []);
+            // --- NEW: Journal States (Daily & Monthly) ---
+            const initialDailyState = { goal: '', behaviors: [], situations: [{sit:'', how:'', who:''}, {sit:'', how:'', who:''}] };
+            const initialMonthlyState = { achievements: '', summary: '', wellDone: '', improve: '' };
+            const [dailyLog, setDailyLog] = useState(initialDailyState);
+            const [monthlyLog, setMonthlyLog] = useState(initialMonthlyState);
+            const [isSavingLog, setIsSavingLog] = useState(false);
 
-            // --- Telegram Notifier ---
+            const timeCtx = useMemo(() => getTimeContext(), []);
+            const behaviorOptions = ['ทัศนคติดี', 'ตรงต่อเวลา', 'เตรียมตัวล่วงหน้า', 'ทำงานเต็มวัน', 'มีเป้าหมาย', 'ควบคุมอารมณ์ได้'];
+
             const notifyTG = async (title, message, targetChatIds = []) => {
                 const ids = [DEFAULT_TG_CHAT_ID, ...targetChatIds];
                 const uniqueIds = [...new Set(ids.filter(id => id && id.trim() !== ""))];
@@ -267,7 +281,6 @@
                 await auth.signOut();
             };
 
-            // 1. Auth sync
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(async (u) => {
                     if (u) {
@@ -285,7 +298,6 @@
                 return () => unsubscribe();
             }, [activeTeamId]);
 
-            // 2. Data sync
             useEffect(() => {
                 if (screen !== 'workspace' || !activeTeamId || !user) return;
                 const path = `teams_v16/${activeTeamId}`;
@@ -303,10 +315,30 @@
                 return () => { unsubTasks(); unsubMembers(); };
             }, [activeTeamId, screen, user, profile]);
 
-            // 3. Scheduled reminders: 08:00 and 19:00
+            // --- NEW: Fetch Journals Effect ---
+            useEffect(() => {
+                if (screen !== 'workspace' || !activeTeamId || !user) return;
+                const fetchLogs = async () => {
+                    try {
+                        // Fetch Daily
+                        const dailyId = `daily_${user.uid}_${selectedDate}`;
+                        const dDoc = await db.collection(`teams_v16/${activeTeamId}/logs`).doc(dailyId).get();
+                        if (dDoc.exists) setDailyLog(dDoc.data());
+                        else setDailyLog(initialDailyState);
+
+                        // Fetch Monthly
+                        const monthStr = `${calDate.getFullYear()}-${String(calDate.getMonth() + 1).padStart(2, '0')}`;
+                        const monthlyId = `monthly_${user.uid}_${monthStr}`;
+                        const mDoc = await db.collection(`teams_v16/${activeTeamId}/logs`).doc(monthlyId).get();
+                        if (mDoc.exists) setMonthlyLog(mDoc.data());
+                        else setMonthlyLog(initialMonthlyState);
+                    } catch (e) { console.error("Error fetching logs", e); }
+                };
+                fetchLogs();
+            }, [activeTeamId, screen, user, selectedDate, calDate]);
+
             useEffect(() => {
                 if (screen !== 'workspace' || !activeTeamId || !profile) return;
-
                 const scheduleReminder = (targetHour, targetMin, reminderKey) => {
                     const now = new Date();
                     const next = new Date();
@@ -321,10 +353,8 @@
                             const doc = await metaRef.get();
                             if (!doc.exists) {
                                 await metaRef.set({ reminded: true, by: profile.name, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-
                                 const snap = await db.collection(`teams_v16/${activeTeamId}/tasks`).get();
                                 const freshTasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
-
                                 const localDateStr = new Date().toISOString().split('T')[0];
                                 const target2 = new Date(); target2.setDate(target2.getDate() + 2);
                                 const t2Str = target2.toISOString().split('T')[0];
@@ -337,37 +367,22 @@
                                 });
 
                                 const timeLabel = targetHour === 8 ? '🌅 ตรวจสอบงานประจำเช้า' : '🌙 สรุปงานประจำเย็น';
-
                                 let messages = [];
-                                if (overdueTasks.length > 0) {
-                                    let msg = overdueTasks.map(t => `‼️ <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n');
-                                    messages.push(`🚨 งานเกินกำหนด ${overdueTasks.length} รายการ:\n${msg}`);
-                                }
-                                if (dueTodayTasks.length > 0) {
-                                    let msg = dueTodayTasks.map(t => `🔥 <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n');
-                                    messages.push(`📌 งานที่ต้องเสร็จวันนี้ ${dueTodayTasks.length} รายการ:\n${msg}`);
-                                }
-                                if (due2DaysTasks.length > 0) {
-                                    let msg = due2DaysTasks.map(t => `⏳ <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n');
-                                    messages.push(`📋 งานกำหนดส่งใน 2 วัน ${due2DaysTasks.length} รายการ:\n${msg}`);
-                                }
+                                if (overdueTasks.length > 0) messages.push(`🚨 งานเกินกำหนด ${overdueTasks.length} รายการ:\n${overdueTasks.map(t => `‼️ <b>${t.title}</b> (รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n')}`);
+                                if (dueTodayTasks.length > 0) messages.push(`📌 งานที่ต้องเสร็จวันนี้ ${dueTodayTasks.length} รายการ:\n${dueTodayTasks.map(t => `🔥 <b>${t.title}</b> (รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n')}`);
+                                if (due2DaysTasks.length > 0) messages.push(`📋 งานกำหนดส่งใน 2 วัน ${due2DaysTasks.length} รายการ:\n${due2DaysTasks.map(t => `⏳ <b>${t.title}</b> (รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n')}`);
 
-                                if (messages.length > 0) {
-                                    notifyTG(timeLabel, messages.join('\n\n'));
-                                } else {
-                                    notifyTG(timeLabel, '✅ ไม่มีงานเร่งด่วนในขณะนี้ ทีมงานดีเยี่ยม!');
-                                }
+                                if (messages.length > 0) notifyTG(timeLabel, messages.join('\n\n'));
+                                else notifyTG(timeLabel, '✅ ไม่มีงานเร่งด่วนในขณะนี้ ทีมงานดีเยี่ยม!');
                             }
                         } catch(e) { console.error("Scheduled Reminder Error", e); }
                     }, delay);
                 };
-
                 const timer8 = scheduleReminder(8, 0, 'sched_morning');
                 const timer19 = scheduleReminder(19, 0, 'sched_evening');
                 return () => { clearTimeout(timer8); clearTimeout(timer19); };
             }, [activeTeamId, screen, profile]);
 
-            // 4. Daily overdue/today reminder (original logic kept)
             useEffect(() => {
                 if (screen !== 'workspace' || !activeTeamId || tasks.length === 0 || !profile) return;
                 const checkReminders = async () => {
@@ -382,14 +397,8 @@
                             const target2DaysStr = targetDate2Days.getFullYear() + "-" + String(targetDate2Days.getMonth() + 1).padStart(2, '0') + "-" + String(targetDate2Days.getDate()).padStart(2, '0');
                             const dueTodayTasks = tasks.filter(t => t.status !== 'done' && t.dueDate === localDateStr);
                             const due2DaysTasks = tasks.filter(t => t.status !== 'done' && t.dueDate === target2DaysStr);
-                            if (dueTodayTasks.length > 0) {
-                                let msg = dueTodayTasks.map(t => `- <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n');
-                                notifyTG("🚨 กำหนดส่งงานวันนี้!", `รายชื่องานที่ต้องทำให้เสร็จภายในวันนี้:\n${msg}`);
-                            }
-                            if (due2DaysTasks.length > 0) {
-                                let msg = due2DaysTasks.map(t => `- <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n');
-                                notifyTG("⏳ เตือนกำหนดส่งงาน (ล่วงหน้า 2 วัน)", `รายชื่องานที่จะถึงกำหนดในอีก 2 วัน:\n${msg}`);
-                            }
+                            if (dueTodayTasks.length > 0) notifyTG("🚨 กำหนดส่งงานวันนี้!", `รายชื่องานที่ต้องทำให้เสร็จภายในวันนี้:\n${dueTodayTasks.map(t => `- <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n')}`);
+                            if (due2DaysTasks.length > 0) notifyTG("⏳ เตือนกำหนดส่งงาน (ล่วงหน้า 2 วัน)", `รายชื่องานที่จะถึงกำหนดในอีก 2 วัน:\n${due2DaysTasks.map(t => `- <b>${t.title}</b> (ผู้รับผิดชอบ: ${t.assignees?.join(', ')})`).join('\n')}`);
                         }
                     } catch(e) { console.error("Reminder Error", e); }
                 };
@@ -397,7 +406,6 @@
                 return () => clearTimeout(timer);
             }, [activeTeamId, screen, tasks.length, profile]);
 
-            // --- Handlers ---
             const handleAuth = async (e) => {
                 e.preventDefault();
                 const em = e.target.email.value, pw = e.target.password.value;
@@ -472,13 +480,11 @@
                 setEditingTask(null);
             };
 
-            // NEW: ฟังก์ชันอัปเดตสถานะงานด่วน (Quick Status Update)
             const quickUpdateStatus = async (task, newStatus) => {
                 if (task.status === newStatus) return;
                 try {
                     await db.collection(`teams_v16/${activeTeamId}/tasks`).doc(task.id).update({ status: newStatus });
                     setViewingTask(prev => ({ ...prev, status: newStatus }));
-                    
                     let personalChatIds = [];
                     if (task.assignees && !task.assignees.includes('ทุกคน')) {
                         task.assignees.forEach(name => {
@@ -487,9 +493,7 @@
                         });
                     }
                     notifyTG("🔄 เปลี่ยนสถานะงาน", `📌 <b>งาน:</b> ${task.title}\n👤 <b>โดย:</b> ${profile.name}\n📊 <b>สถานะใหม่:</b> ${newStatus.toUpperCase()}`, personalChatIds);
-                } catch (e) {
-                    console.error("Error updating status:", e);
-                }
+                } catch (e) { console.error("Error updating status:", e); }
             };
 
             const deleteTask = async (task) => {
@@ -521,7 +525,26 @@
                 }
             };
 
-            // --- Computations ---
+            // --- NEW: Save Journal Functions ---
+            const saveDailyLog = async () => {
+                setIsSavingLog(true);
+                try {
+                    const dailyId = `daily_${user.uid}_${selectedDate}`;
+                    await db.collection(`teams_v16/${activeTeamId}/logs`).doc(dailyId).set(dailyLog, { merge: true });
+                } catch (e) { console.error("Save daily log error", e); }
+                setTimeout(() => setIsSavingLog(false), 500);
+            };
+
+            const saveMonthlyLog = async () => {
+                setIsSavingLog(true);
+                try {
+                    const monthStr = `${calDate.getFullYear()}-${String(calDate.getMonth() + 1).padStart(2, '0')}`;
+                    const monthlyId = `monthly_${user.uid}_${monthStr}`;
+                    await db.collection(`teams_v16/${activeTeamId}/logs`).doc(monthlyId).set(monthlyLog, { merge: true });
+                } catch (e) { console.error("Save monthly log error", e); }
+                setTimeout(() => setIsSavingLog(false), 500);
+            };
+
             const stats = useMemo(() => {
                 const t = tasks || [], total = t.length, done = t.filter(x => x.status === 'done').length;
                 const workload = (members || []).map(m => ({
@@ -540,7 +563,6 @@
 
             if (loading) return <div className="h-screen flex items-center justify-center font-bold text-indigo-600 text-xl"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mr-3"></div> TeamSync Linking...</div>;
 
-            // --- Screens ---
             if (screen === 'auth') return (
                 <div className="h-screen flex items-center justify-center p-6 bg-slate-900">
                     <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center animate-in">
@@ -651,7 +673,6 @@
                     </nav>
 
                     <main className="p-4 md:p-12 max-w-4xl mx-auto space-y-6 pb-12">
-                        {/* Time-based colored header */}
                         <header className={`rounded-[2rem] p-6 mb-2 ${timeCtx.bgCls}`}>
                             <div className="flex justify-between items-start">
                                 <div>
@@ -684,7 +705,6 @@
                                     <div className="w-24 h-12 bg-indigo-50 rounded-xl relative overflow-hidden"><div className="h-full bg-indigo-500 transition-all duration-1000" style={{width: `${stats.rate}%`}}></div></div>
                                 </div>
 
-                                {/* Urgent tasks highlight on dashboard */}
                                 {(() => {
                                     const urgentTasks = sortByPriority(tasks.filter(t => t.status !== 'done' && getUrgencyScore(t.dueDate) <= 1));
                                     if (urgentTasks.length === 0) return null;
@@ -731,7 +751,6 @@
 
                         {view === 'mytasks' && (
                             <div className="bg-white p-7 rounded-[2.5rem] border shadow-sm animate-in">
-                                {/* Priority legend */}
                                 <div className="flex gap-2 mb-5 flex-wrap">
                                     <span className="text-[9px] font-black bg-red-50 text-red-500 border border-red-100 px-2 py-1 rounded-lg">🔴 สูง/เร่งด่วน</span>
                                     <span className="text-[9px] font-black bg-amber-50 text-amber-500 border border-amber-100 px-2 py-1 rounded-lg">🟡 ปานกลาง</span>
@@ -826,13 +845,12 @@
                                         <button onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1))} className="p-2.5 bg-slate-50 rounded-xl text-[10px] font-black active:scale-90 transition-all">Next</button>
                                     </div>
                                 </div>
-                                {/* Legend */}
                                 <div className="flex gap-2 mb-4 flex-wrap px-2">
                                     <span className="text-[8px] font-black bg-red-100 text-red-500 px-2 py-1 rounded-md">🔥 วันนี้/เลยกำหนด</span>
                                     <span className="text-[8px] font-black bg-amber-100 text-amber-600 px-2 py-1 rounded-md">⚡ ใกล้กำหนด</span>
                                     <span className="text-[8px] font-black bg-indigo-100 text-indigo-500 px-2 py-1 rounded-md">📋 มีงาน</span>
                                 </div>
-                                <div className="calendar-grid">
+                                <div className="calendar-grid mb-6">
                                     {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(d => (<div key={d} className="text-center font-black text-slate-300 text-[9px] py-2 uppercase tracking-[0.2em]">{d}</div>))}
                                     {Array.from({ length: new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay() }).map((_, i) => <div key={`e-${i}`} className="h-12" />)}
                                     {Array.from({ length: new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
@@ -873,7 +891,7 @@
                                     })}
                                 </div>
                                 
-                                <div className="mt-6 border-t pt-5">
+                                <div className="border-t pt-5">
                                     <div className="flex justify-between items-center mb-3">
                                         <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                                             📅 ตารางงานวันที่ {selectedDate.split('-').reverse().join('/')}
@@ -882,7 +900,7 @@
                                             + เพิ่มงาน
                                         </button>
                                     </div>
-                                    <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar mb-6">
+                                    <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar mb-8">
                                         {sortByPriority(tasks.filter(t => t.dueDate === selectedDate && t.status !== 'done')).map(t => {
                                             const badge = getDueBadge(t.dueDate);
                                             return (
@@ -898,25 +916,65 @@
                                         {tasks.filter(t => t.dueDate === selectedDate && t.status !== 'done').length === 0 && <p className="text-center py-4 text-slate-300 font-bold italic text-sm bg-slate-50 rounded-xl">ไม่มีงานในวันนี้ สามารถพักผ่อนได้เลย ☕</p>}
                                     </div>
 
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-t pt-4">งานอื่นๆ ในเดือนนี้</h4>
-                                    <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
-                                        {sortByPriority(tasks.filter(t => {
-                                            if (!t.dueDate || t.status === 'done' || t.dueDate === selectedDate) return false;
-                                            const [yr, mo] = t.dueDate.split('-').map(Number);
-                                            return yr === calDate.getFullYear() && mo === calDate.getMonth() + 1;
-                                        })).map(t => {
-                                            const badge = getDueBadge(t.dueDate);
-                                            return (
-                                                <div key={t.id} onClick={() => setViewingTask(t)} className={`p-3 rounded-xl flex justify-between items-center cursor-pointer ${getTaskCardClass(t)} opacity-80 hover:opacity-100`}>
-                                                    <div>
-                                                        <p className="font-bold text-xs">{t.title}</p>
-                                                        <p className="text-[9px] text-slate-400 mt-0.5">{t.dueDate} • {t.assignees?.join(', ')}</p>
-                                                    </div>
-                                                    {badge && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md ${badge.cls} shrink-0`}>{badge.dot} {badge.label}</span>}
+                                    {/* --- NEW: Daily Goal & Reflection --- */}
+                                    <div className="bg-slate-50 p-5 rounded-[2rem] border border-slate-200">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">🎯 แผนงานและการสะท้อนตัวเอง <span className="text-[9px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-widest">Personal</span></h4>
+                                            <button onClick={saveDailyLog} className="text-[10px] font-black bg-slate-800 text-white px-4 py-2 rounded-xl active:scale-95 shadow-sm flex items-center gap-1">
+                                                {isSavingLog ? 'Saving...' : 'บันทึกข้อมูล'} <Icon name="save" size={12}/>
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="space-y-5">
+                                            {/* Today's Goal */}
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic block mb-1">เป้าหมายหลักของวันนี้ (Today's Goal)</label>
+                                                <input value={dailyLog.goal} onChange={e => setDailyLog({...dailyLog, goal: e.target.value})} placeholder="วันนี้ตั้งใจจะทำอะไรให้สำเร็จ..." className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-100" />
+                                            </div>
+
+                                            {/* Behaviors Check */}
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic block mb-2">เช็คพฤติกรรม (Behavior Check)</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {behaviorOptions.map(bh => {
+                                                        const isChecked = dailyLog.behaviors?.includes(bh);
+                                                        return (
+                                                            <button key={bh} onClick={() => {
+                                                                const newBh = isChecked ? dailyLog.behaviors.filter(b => b !== bh) : [...(dailyLog.behaviors||[]), bh];
+                                                                setDailyLog({...dailyLog, behaviors: newBh});
+                                                            }} className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all flex items-center gap-1 border ${isChecked ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}`}>
+                                                                <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${isChecked ? 'border-white bg-indigo-500' : 'border-slate-300'}`}>
+                                                                    {isChecked && <Icon name="check" size={8} />}
+                                                                </div>
+                                                                {bh}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+
+                                            {/* Situation Analysis Table */}
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic block mb-2">วิเคราะห์ปัญหา/สถานการณ์ (Situation Analysis)</label>
+                                                <div className="space-y-2">
+                                                    {dailyLog.situations.map((sitRow, idx) => (
+                                                        <div key={idx} className="flex flex-col md:flex-row gap-2 bg-white p-2 rounded-xl border border-slate-200">
+                                                            <input value={sitRow.sit} onChange={e => {
+                                                                const newSits = [...dailyLog.situations]; newSits[idx].sit = e.target.value; setDailyLog({...dailyLog, situations: newSits});
+                                                            }} placeholder="ปัญหา/สถานการณ์" className="flex-1 p-2 bg-slate-50 rounded-lg text-xs font-bold outline-none" />
+                                                            <input value={sitRow.how} onChange={e => {
+                                                                const newSits = [...dailyLog.situations]; newSits[idx].how = e.target.value; setDailyLog({...dailyLog, situations: newSits});
+                                                            }} placeholder="วิธีแก้ไข (HOW)" className="flex-1 p-2 bg-slate-50 rounded-lg text-xs font-bold outline-none" />
+                                                            <input value={sitRow.who} onChange={e => {
+                                                                const newSits = [...dailyLog.situations]; newSits[idx].who = e.target.value; setDailyLog({...dailyLog, situations: newSits});
+                                                            }} placeholder="ใครช่วยได้ (WHO)" className="w-full md:w-24 p-2 bg-slate-50 rounded-lg text-xs font-bold outline-none text-center" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                    {/* --- END Daily Goal & Reflection --- */}
                                 </div>
                             </div>
                         )}
@@ -931,6 +989,7 @@
                                     </div>
                                     <p className="mt-8 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Team Success Rate</p>
                                 </div>
+                                
                                 <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl"></div>
                                     <h3 className="text-sm font-black mb-8 tracking-tight text-indigo-400 uppercase italic">Member Workload Balance</h3>
@@ -943,6 +1002,43 @@
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* --- NEW: Monthly Planner & Summary --- */}
+                                <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">📝 สรุปแผนและเป้าหมาย <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-widest">เดือน {calDate.toLocaleString('th-TH', { month: 'long', year: 'numeric' })}</span></h3>
+                                        <button onClick={saveMonthlyLog} className="text-[10px] font-black bg-indigo-600 text-white px-4 py-2 rounded-xl active:scale-95 shadow-sm flex items-center gap-1">
+                                            {isSavingLog ? 'Saving...' : 'บันทึกข้อมูล'} <Icon name="save" size={12}/>
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Green Box */}
+                                        <div className="bg-pastel-green p-4 rounded-2xl flex flex-col">
+                                            <label className="text-[11px] font-black text-green-800 mb-2">ทำอะไรสำเร็จตามเป้าหมายแล้วบ้าง?</label>
+                                            <textarea value={monthlyLog.achievements} onChange={e => setMonthlyLog({...monthlyLog, achievements: e.target.value})} className="w-full bg-transparent border-none outline-none resize-none h-24 text-sm font-bold text-green-900 placeholder-green-700/50" placeholder="พิมพ์บันทึกความสำเร็จ..."></textarea>
+                                        </div>
+
+                                        {/* Brown Box */}
+                                        <div className="bg-pastel-brown p-4 rounded-2xl flex flex-col">
+                                            <label className="text-[11px] font-black text-stone-800 mb-2">สรุปเดือนนี้</label>
+                                            <textarea value={monthlyLog.summary} onChange={e => setMonthlyLog({...monthlyLog, summary: e.target.value})} className="w-full bg-transparent border-none outline-none resize-none h-24 text-sm font-bold text-stone-900 placeholder-stone-700/50" placeholder="พิมพ์ข้อความสรุป..."></textarea>
+                                        </div>
+
+                                        {/* Blue Box */}
+                                        <div className="bg-pastel-blue p-4 rounded-2xl flex flex-col">
+                                            <label className="text-[11px] font-black text-cyan-800 mb-2">สิ่งที่ทำได้ดี</label>
+                                            <textarea value={monthlyLog.wellDone} onChange={e => setMonthlyLog({...monthlyLog, wellDone: e.target.value})} className="w-full bg-transparent border-none outline-none resize-none h-24 text-sm font-bold text-cyan-900 placeholder-cyan-700/50" placeholder="พิมพ์สิ่งที่ทำได้ดี..."></textarea>
+                                        </div>
+
+                                        {/* Pink Box */}
+                                        <div className="bg-pastel-pink p-4 rounded-2xl flex flex-col">
+                                            <label className="text-[11px] font-black text-pink-800 mb-2">สิ่งที่ควรปรับปรุง</label>
+                                            <textarea value={monthlyLog.improve} onChange={e => setMonthlyLog({...monthlyLog, improve: e.target.value})} className="w-full bg-transparent border-none outline-none resize-none h-24 text-sm font-bold text-pink-900 placeholder-pink-700/50" placeholder="พิมพ์สิ่งที่ต้องแก้ไข..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* --- END Monthly Planner & Summary --- */}
                             </div>
                         )}
 
@@ -1045,7 +1141,6 @@
                         </div>
                     )}
 
-                    {/* NEW: Modal แก้ไขปุ่มปิด และเพิ่มฟังก์ชันอัปเดตสถานะด่วน */}
                     {viewingTask && (
                         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-6 bg-slate-900/60 backdrop-blur-sm">
                             <div className="bg-white w-full max-w-sm rounded-t-[3rem] md:rounded-[3rem] shadow-2xl p-8 md:p-10 relative animate-in max-h-[85vh] overflow-y-auto no-scrollbar flex flex-col">
@@ -1070,7 +1165,6 @@
                                                     <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100"><div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-lg uppercase shadow-lg shrink-0">{viewingTask.assignees?.[0]?.substring(0,2) || "?"}</div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assignees</p><p className="font-bold text-slate-800 text-sm mt-1">{viewingTask.assignees?.join(', ')}</p></div></div>
                                                     <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100"><div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm shrink-0"><Icon name="calendar" size={24}/></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Due Date</p><p className="font-bold text-slate-800 text-lg mt-1">{viewingTask.dueDate}</p></div></div>
                                                     
-                                                    {/* NEW: เมนูอัปเดตสถานะงานด่วน โดยไม่ต้องกดเข้าหน้าแก้ไข */}
                                                     <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 mt-4">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">เปลี่ยนสถานะด่วน</p>
                                                         <div className="flex gap-2">
