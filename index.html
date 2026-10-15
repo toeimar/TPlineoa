@@ -19,23 +19,23 @@
                 extend: {
                     colors: {
                         champagne: {
-                            50: '#FDFCF9',
-                            100: '#F7F3EC',
-                            200: '#ECE2D3',
-                            300: '#DFCDB5',
-                            400: '#C8AE8D',
-                            500: '#A98A62',
-                            600: '#8A6C47',
-                            700: '#6E5334',
-                            800: '#4F3A22',
-                            900: '#342514'
+                            50: '#FAF8F5',
+                            100: '#F4EFE6',
+                            200: '#E8DEC9',
+                            300: '#D8C7A7',
+                            400: '#C2AA80',
+                            500: '#A38B5D',
+                            600: '#836E46',
+                            700: '#645332',
+                            800: '#473A21',
+                            900: '#2D2313'
                         },
                         gold: {
-                            light: '#E6CF9B',
+                            light: '#EED9A2',
                             DEFAULT: '#C39A4D',
                             dark: '#936F2C'
                         },
-                        purebg: '#FAFAF8'
+                        purebg: '#FCFCFB'
                     },
                     fontFamily: {
                         niramit: ['Niramit', 'serif'],
@@ -48,42 +48,36 @@
     <style>
         body {
             font-family: 'Prompt', sans-serif;
-            background-color: #FAFAF8;
-            color: #342514;
+            background-color: #FCFCFB;
+            color: #2D2313;
         }
         .font-luxury {
             font-family: 'Niramit', serif;
         }
         .gold-gradient {
-            background: linear-gradient(135deg, #E6CF9B 0%, #C39A4D 50%, #936F2C 100%);
+            background: linear-gradient(135deg, #EED9A2 0%, #C39A4D 50%, #936F2C 100%);
         }
-        .gold-border-gradient {
-            border-image: linear-gradient(135deg, #E6CF9B, #C39A4D, #936F2C) 1;
+        .gold-border {
+            border-image: linear-gradient(135deg, #EED9A2, #C39A4D, #936F2C) 1;
         }
-        .champagne-card-bg {
-            background: linear-gradient(180deg, #FFFFFF 0%, #FBF9F5 100%);
+        .luxury-card {
+            background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .text-gold {
-            color: #C39A4D;
+        .luxury-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 25px 35px -12px rgba(195, 154, 77, 0.18);
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #F7F3EC;
+            background: #F4EFE6;
         }
         ::-webkit-scrollbar-thumb {
-            background: #C8AE8D;
+            background: #C2AA80;
             border-radius: 3px;
-        }
-        .card-hover {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .card-hover:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 20px 30px -10px rgba(169, 138, 98, 0.15);
         }
         .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -97,28 +91,25 @@
 <body class="min-h-screen flex flex-col bg-purebg selection:bg-gold selection:text-white antialiased">
 
     <!-- Navigation Bar -->
-    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-champagne-200/60 transition-all">
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-champagne-200/60 shadow-sm transition-all">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 sm:h-24 flex items-center justify-between">
             <!-- Brand Logo & Name -->
             <div class="flex items-center space-x-4 cursor-pointer" onclick="switchView('customer')">
                 <div class="relative group">
-                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full p-0.5 gold-gradient shadow-sm">
-                        <img id="nav-logo" src="https://placehold.co/200x200/F7F3EC/4F3A22?text=KHAMWHAN545" alt="Khamwhan545 Logo" class="w-full h-full rounded-full object-cover bg-white">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full p-0.5 gold-gradient shadow-md">
+                        <img id="nav-logo" src="https://placehold.co/200x200/F4EFE6/473A21?text=KHAMWHAN545" alt="Khamwhan545 Logo" class="w-full h-full rounded-full object-cover bg-white">
                     </div>
                 </div>
                 <div>
                     <h1 id="nav-brand-name" class="font-luxury text-2xl sm:text-3xl font-semibold tracking-wider text-champagne-900 leading-tight">KHAMWHAN545</h1>
-                    <p class="text-[11px] sm:text-xs text-gold tracking-widest uppercase font-light">ขนมไทย & ชุดทำบุญพรีเมี่ยม</p>
+                    <p class="text-[10px] sm:text-xs text-gold tracking-widest uppercase font-light">ขนมไทย & ชุดทำบุญพรีเมี่ยม</p>
                 </div>
             </div>
 
-            <!-- View Switcher & Actions -->
-            <div class="flex items-center space-x-3">
-                <button onclick="switchView('customer')" id="btn-view-customer" class="hidden sm:inline-flex items-center px-5 py-2 text-xs uppercase tracking-widest font-medium rounded-full border border-champagne-300 text-champagne-800 hover:bg-champagne-100 transition">
-                    <i class="fa-solid fa-store mr-2 text-gold"></i> หน้าร้านค้า
-                </button>
+            <!-- Admin Toggle Button (No customer store view button here) -->
+            <div class="flex items-center">
                 <button onclick="openAdminLoginModal()" id="btn-admin-toggle" class="inline-flex items-center px-5 py-2.5 text-xs uppercase tracking-widest font-medium rounded-full gold-gradient text-white shadow-md hover:opacity-95 transition">
-                    <i class="fa-solid fa-lock mr-2"></i> ระบบจัดการ (Admin)
+                    <i class="fa-solid fa-lock mr-2 text-xs"></i> ระบบจัดการ (Admin)
                 </button>
             </div>
         </div>
@@ -127,21 +118,21 @@
     <main class="flex-grow">
 
         <!-- ================= CUSTOMER VIEW ================= -->
-        <div id="view-customer" class="space-y-16 pb-20">
+        <div id="view-customer" class="space-y-16 pb-24">
             
             <!-- Hero Banner Section -->
-            <section class="relative bg-gradient-to-b from-champagne-100/70 via-champagne-50/30 to-purebg py-16 sm:py-24 px-4 sm:px-6 lg:px-8 text-center overflow-hidden border-b border-champagne-200/40">
-                <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#C39A4D_1px,transparent_1px)] [background-size:24px_24px]"></div>
+            <section class="relative bg-gradient-to-b from-champagne-100/60 via-champagne-50/20 to-purebg py-16 sm:py-24 px-4 sm:px-6 lg:px-8 text-center overflow-hidden border-b border-champagne-200/40">
+                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#C39A4D_1px,transparent_1px)] [background-size:20px_20px]"></div>
                 <div class="relative max-w-4xl mx-auto space-y-6">
-                    <div class="inline-flex items-center space-x-2 px-4 py-1.5 bg-white rounded-full border border-champagne-300 shadow-sm">
+                    <div class="inline-flex items-center space-x-2 px-5 py-1.5 bg-white rounded-full border border-champagne-300 shadow-sm">
                         <span class="w-1.5 h-1.5 rounded-full bg-gold"></span>
                         <span class="text-xs uppercase tracking-widest text-champagne-800 font-medium">ประณีต ทรงคุณค่า งดงามตามวิถีไทย</span>
                     </div>
                     <h2 class="font-luxury text-3xl sm:text-5xl lg:text-6xl font-normal text-champagne-900 tracking-wide leading-tight">
-                        สืบสานคุณค่ามงคลไทย ด้วยความปราณีตระดับพรีเมี่ยม
+                        สืบสานคุณค่ามงคลไทย ด้วยความประณีตระดับพรีเมี่ยม
                     </h2>
-                    <div class="w-24 h-0.5 mx-auto gold-gradient rounded-full opacity-70"></div>
-                    <p class="text-sm sm:text-base text-champagne-700 max-w-2xl mx-auto font-light leading-relaxed">
+                    <div class="w-20 h-0.5 mx-auto gold-gradient rounded-full opacity-80"></div>
+                    <p class="text-xs sm:text-sm text-champagne-700 max-w-2xl mx-auto font-light leading-relaxed tracking-wide">
                         บริการจัดชุดทำบุญถวายพระภิกษุสงฆ์ ชุดสักการะบวงสรวงสิ่งศักดิ์สิทธิ์ ขนมไทยมงคลโบราณ และบริการจัดงานบุญครบวงจร
                     </p>
                     <div class="pt-4 flex flex-wrap justify-center gap-4">
@@ -155,66 +146,66 @@
                 </div>
             </section>
 
-            <!-- Categories Filter & Search Section -->
+            <!-- Navigation Filter Tabs & Search Bar -->
             <section id="categories-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 border-b border-champagne-200/60 pb-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 border-b border-champagne-200/80 pb-6">
                     <div>
-                        <span class="text-xs uppercase tracking-widest text-gold font-semibold">Catalog Categories</span>
-                        <h3 class="font-luxury text-2xl sm:text-4xl text-champagne-900 font-medium mt-1">หมวดหมู่รายการบริการ</h3>
+                        <span class="text-xs uppercase tracking-widest text-gold font-semibold">Luxury Catalog</span>
+                        <h3 class="font-luxury text-2xl sm:text-4xl text-champagne-900 font-medium mt-1">แคตตาล็อกรายการบริการ</h3>
                     </div>
                     <div class="w-full md:w-auto">
                         <div class="relative w-full md:w-80">
-                            <input type="text" id="search-input" placeholder="ค้นหารายการขนมหรือชุดทำบุญ..." oninput="filterItems()" class="w-full pl-10 pr-4 py-2.5 rounded-full border border-champagne-300 bg-white text-xs sm:text-sm focus:outline-none focus:border-gold transition">
+                            <input type="text" id="search-input" placeholder="ค้นหารายการ..." oninput="filterItems()" class="w-full pl-10 pr-4 py-2.5 rounded-full border border-champagne-300 bg-white text-xs sm:text-sm focus:outline-none focus:border-gold transition shadow-sm">
                             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-champagne-400 text-xs"></i>
                         </div>
                     </div>
                 </div>
 
-                <!-- 6 Main Categories Grid Buttons -->
-                <div id="category-tabs" class="flex flex-wrap gap-2.5 mb-10">
+                <!-- Quick Jump Category Navigation -->
+                <div id="category-quick-nav" class="flex overflow-x-auto gap-2.5 pb-4 mb-10 no-scrollbar">
                     <!-- Injected dynamically via JS -->
                 </div>
 
-                <!-- Products Grid -->
-                <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Categorized Products Layout Container (Grouped by Category) -->
+                <div id="categorized-products-container" class="space-y-16">
                     <!-- Injected dynamically via JS -->
                 </div>
 
-                <!-- Empty State -->
+                <!-- Empty Search Result State -->
                 <div id="no-products" class="hidden text-center py-20 bg-white rounded-3xl border border-champagne-200/80 shadow-sm">
                     <div class="w-16 h-16 mx-auto rounded-full bg-champagne-100 flex items-center justify-center text-gold mb-4 text-2xl">
                         <i class="fa-solid fa-box-open"></i>
                     </div>
-                    <h4 class="font-luxury text-xl text-champagne-900">ไม่พบรายการสินค้าในหมวดหมู่นี้</h4>
-                    <p class="text-xs text-champagne-600 mt-1">ลองเปลี่ยนคำค้นหาหรือเลือกดูหมวดหมู่อื่น</p>
+                    <h4 class="font-luxury text-xl text-champagne-900">ไม่พบรายการสินค้าที่ตรงตามคำค้นหา</h4>
+                    <p class="text-xs text-champagne-600 mt-1">ลองเปลี่ยนคำค้นหาใหม่อีกครั้ง</p>
                 </div>
             </section>
 
             <!-- Location & Contact Section -->
             <section id="contact-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                <div class="bg-white rounded-3xl border border-champagne-200/80 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-                    <div class="lg:col-span-5 p-8 sm:p-12 flex flex-col justify-between space-y-8 bg-gradient-to-br from-white to-champagne-50/50">
+                <div class="bg-white rounded-3xl border border-champagne-200/80 shadow-md overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+                    <div class="lg:col-span-5 p-8 sm:p-12 flex flex-col justify-between space-y-8 bg-gradient-to-br from-white via-champagne-50/30 to-champagne-100/40">
                         <div>
-                            <span class="text-xs uppercase tracking-widest text-gold font-semibold">Location & Ordering</span>
+                            <span class="text-xs uppercase tracking-widest text-gold font-semibold">Location & Contact</span>
                             <h3 class="font-luxury text-2xl sm:text-4xl font-normal text-champagne-900 mt-1">ติดต่อเรา & ที่ตั้งร้าน</h3>
                             <p class="text-xs sm:text-sm text-champagne-700 mt-3 leading-relaxed font-light">
                                 บริการจัดส่งชุดทำบุญพรีเมี่ยม ขนมไทยโบราณ และบริการจัดงานบุญครบวงจร สอบถามข้อมูลหรือปรึกษาเพิ่มเติมได้ผ่านทาง Line Official
                             </p>
                         </div>
 
-                        <div class="space-y-5">
+                        <div class="space-y-6">
                             <div class="flex items-start space-x-4">
-                                <div class="w-10 h-10 rounded-full bg-champagne-100/80 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-champagne-100 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0 shadow-sm">
                                     <i class="fa-solid fa-location-dot"></i>
                                 </div>
                                 <div>
                                     <h4 class="text-xs uppercase tracking-wider text-champagne-800 font-semibold">ที่ตั้งร้าน</h4>
-                                    <p id="info-address" class="text-xs sm:text-sm text-champagne-700 mt-0.5 font-light">กรุณาอัปเดตข้อมูลที่ตั้งร้านในระบบ Admin</p>
+                                    <p id="info-address" class="text-xs sm:text-sm text-champagne-700 mt-0.5 font-light leading-relaxed">กรุณาอัปเดตข้อมูลที่ตั้งร้านในระบบ Admin</p>
                                 </div>
                             </div>
 
                             <div class="flex items-start space-x-4">
-                                <div class="w-10 h-10 rounded-full bg-champagne-100/80 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-champagne-100 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0 shadow-sm">
                                     <i class="fa-solid fa-phone"></i>
                                 </div>
                                 <div>
@@ -224,7 +215,7 @@
                             </div>
 
                             <div class="flex items-start space-x-4">
-                                <div class="w-10 h-10 rounded-full bg-champagne-100/80 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-champagne-100 border border-champagne-200 flex items-center justify-center text-gold flex-shrink-0 shadow-sm">
                                     <i class="fa-brands fa-line"></i>
                                 </div>
                                 <div>
@@ -236,13 +227,13 @@
 
                         <div>
                             <a id="contact-link-btn" href="#" target="_blank" class="w-full py-3.5 rounded-full gold-gradient text-white font-medium text-xs uppercase tracking-widest shadow-md hover:opacity-95 transition flex items-center justify-center">
-                                <i class="fa-brands fa-line text-base mr-2"></i> ติดต่อสอบถาม / สั่งซื้อทาง Line
+                                <i class="fa-brands fa-line text-lg mr-2"></i> ติดต่อสอบถาม / สั่งซื้อทาง Line
                             </a>
                         </div>
                     </div>
 
-                    <!-- Map Iframe Container -->
-                    <div class="lg:col-span-7 min-h-[350px] bg-champagne-100 relative">
+                    <!-- Map Container -->
+                    <div class="lg:col-span-7 min-h-[380px] bg-champagne-100 relative">
                         <iframe id="info-map-iframe" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.567086888498!2d100.501765!3d13.756331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIyLjgiTiAxMDAzMDAxOS5y!5e0!3m2!1sth!2sth!4v1600000000000!5m2!1sth!2sth" class="w-full h-full border-0 absolute inset-0" allowfullscreen="" loading="lazy"></iframe>
                     </div>
                 </div>
@@ -260,7 +251,7 @@
                 </div>
                 <div class="flex items-center space-x-3">
                     <button onclick="switchView('customer')" class="px-5 py-2.5 rounded-full bg-champagne-100 text-champagne-800 hover:bg-champagne-200 font-medium text-xs uppercase tracking-wider transition inline-flex items-center">
-                        <i class="fa-solid fa-eye mr-2 text-gold"></i> ดูหน้าลูกค้า
+                        <i class="fa-solid fa-eye mr-2 text-gold"></i> สลับไปดูหน้าลูกค้า
                     </button>
                     <button onclick="adminLogout()" class="px-5 py-2.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 font-medium text-xs uppercase tracking-wider transition inline-flex items-center">
                         <i class="fa-solid fa-right-from-bracket mr-2"></i> ออกจากระบบ
@@ -352,7 +343,7 @@
                             <input type="text" id="admin-store-name" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-300 text-sm focus:outline-none focus:border-gold">
                         </div>
                         
-                        <!-- Logo Image URL & Direct Upload -->
+                        <!-- Logo Upload / Link -->
                         <div>
                             <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">โลโก้ร้าน (URL หรืออัปโหลดรูปภาพ)</label>
                             <div class="flex gap-2">
@@ -429,18 +420,18 @@
 
     <!-- ================= MODALS ================= -->
 
-    <!-- Admin Login Modal -->
+    <!-- Admin Login Modal (Pin Hint removed) -->
     <div id="modal-admin-login" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4">
         <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-champagne-200 relative">
             <button onclick="closeAdminLoginModal()" class="absolute top-4 right-4 text-champagne-400 hover:text-champagne-800 w-8 h-8 rounded-full flex items-center justify-center bg-champagne-50">
                 <i class="fa-solid fa-xmark"></i>
             </button>
             <div class="text-center mb-6">
-                <div class="w-14 h-14 mx-auto rounded-full bg-champagne-100 border border-champagne-200 text-gold flex items-center justify-center text-xl mb-3">
+                <div class="w-14 h-14 mx-auto rounded-full bg-champagne-100 border border-champagne-200 text-gold flex items-center justify-center text-xl mb-3 shadow-sm">
                     <i class="fa-solid fa-lock"></i>
                 </div>
                 <h3 class="font-luxury text-2xl font-medium text-champagne-900">เข้าสู่ระบบผู้ดูแลร้าน</h3>
-                <p class="text-xs text-champagne-600 mt-1">กรุณากรอกรหัส PIN 6 หลัก (รหัสเริ่มต้น: 123456)</p>
+                <p class="text-xs text-champagne-600 mt-1">กรุณากรอกรหัส PIN 6 หลัก</p>
             </div>
             <form onsubmit="handleAdminLogin(event)" class="space-y-4">
                 <div>
@@ -468,7 +459,7 @@
                     <input type="text" id="product-name" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-300 text-sm focus:outline-none focus:border-gold" placeholder="เช่น ปิ่นโตภัตตาหารประณีต">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">หมวดหมู่สินค้า (จาก 6 หมวดหลัก)</label>
+                    <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">หมวดหมู่สินค้า</label>
                     <select id="product-category" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-300 text-sm focus:outline-none focus:border-gold bg-white">
                         <!-- Injected via JS -->
                     </select>
@@ -552,10 +543,10 @@
     </div>
 
     <script>
-        // Default Logo SVG Base64 / Clean Vintage Emblem Data URL
-        const defaultLogoData = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="96" fill="%23F7F3EC" stroke="%23C39A4D" stroke-width="4"/><circle cx="100" cy="100" r="88" fill="none" stroke="%23DFCDB5" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M100 35 C115 55 135 60 150 70 C135 85 130 105 100 125 C70 105 65 85 50 70 C65 60 85 55 100 35 Z" fill="none" stroke="%23C39A4D" stroke-width="2"/><circle cx="100" cy="72" r="12" fill="%23C39A4D" opacity="0.3"/><text x="100" y="145" font-family="Niramit, serif" font-size="16" font-weight="bold" fill="%234F3A22" text-anchor="middle" letter-spacing="2">KHAMWHAN</text><text x="100" y="165" font-family="Prompt, sans-serif" font-size="14" font-weight="600" fill="%23C39A4D" text-anchor="middle" letter-spacing="4">545</text></svg>';
+        // Official Khamwhan Vintage Logo SVG Vector
+        const defaultLogoData = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="96" fill="%23F4EFE6" stroke="%23C39A4D" stroke-width="4"/><circle cx="100" cy="100" r="88" fill="none" stroke="%23D8C7A7" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M100 35 C115 55 135 60 150 70 C135 85 130 105 100 125 C70 105 65 85 50 70 C65 60 85 55 100 35 Z" fill="none" stroke="%23C39A4D" stroke-width="2"/><circle cx="100" cy="72" r="12" fill="%23C39A4D" opacity="0.3"/><text x="100" y="145" font-family="Niramit, serif" font-size="16" font-weight="bold" fill="%23473A21" text-anchor="middle" letter-spacing="2">KHAMWHAN</text><text x="100" y="165" font-family="Prompt, sans-serif" font-size="14" font-weight="600" fill="%23C39A4D" text-anchor="middle" letter-spacing="4">545</text></svg>';
 
-        // Default Categories (6 Main categories adhering to strict request)
+        // Default Categories (6 Strict requested categories)
         const defaultCategories = [
             { id: 'cat1', name: '1. ชุดทำบุญประณีต (ปิ่นโตภัตตาหาร, สังฆทาน, ผ้าไตร, พวงมาลัย, แจกันถวายพระ)' },
             { id: 'cat2', name: '2. ชุดสักการะบวงสรวง (ศาลหลักเมืองกรุงเทพฯ, องค์พระแก้วมรกต, พระแม่ธรณีบีบมวยผม, พระปรางค์วัดอรุณ)' },
@@ -565,7 +556,7 @@
             { id: 'cat6', name: '6. รายการอื่นๆ สามารถฝากถวายได้' }
         ];
 
-        // Sample Premium Products Data
+        // Sample Products Data
         const defaultProducts = [
             {
                 id: 'p1',
@@ -653,17 +644,15 @@
             adminPin: '123456'
         };
 
-        // Persistent State Handling
-        let categories = JSON.parse(localStorage.getItem('kh_v2_categories')) || defaultCategories;
-        let products = JSON.parse(localStorage.getItem('kh_v2_products')) || defaultProducts;
-        let storeInfo = JSON.parse(localStorage.getItem('kh_v2_storeInfo')) || defaultStoreInfo;
-        let currentCategoryFilter = 'all';
+        // Local Storage State Management
+        let categories = JSON.parse(localStorage.getItem('kh_v3_categories')) || defaultCategories;
+        let products = JSON.parse(localStorage.getItem('kh_v3_products')) || defaultProducts;
+        let storeInfo = JSON.parse(localStorage.getItem('kh_v3_storeInfo')) || defaultStoreInfo;
 
-        // Application Initialization
+        // Initialization
         window.onload = function() {
             renderStoreInfo();
-            renderCustomerCategories();
-            renderCustomerProducts();
+            renderCategorizedCustomerProducts();
         };
 
         // View Navigation Switcher
@@ -687,13 +676,12 @@
                 customerView.classList.remove('hidden');
                 adminView.classList.add('hidden');
                 renderStoreInfo();
-                renderCustomerCategories();
-                renderCustomerProducts();
+                renderCategorizedCustomerProducts();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
 
-        // Render Store Information
+        // Render Store Info Elements
         function renderStoreInfo() {
             document.getElementById('nav-brand-name').innerText = storeInfo.name;
             if (storeInfo.logo) {
@@ -708,83 +696,91 @@
             }
         }
 
-        // Render Customer Category Filter Tabs
-        function renderCustomerCategories() {
-            const container = document.getElementById('category-tabs');
-            let html = `
-                <button onclick="setCategoryFilter('all')" class="px-5 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition ${currentCategoryFilter === 'all' ? 'gold-gradient text-white shadow-md' : 'bg-white text-champagne-800 border border-champagne-200 hover:bg-champagne-100/60'}">
-                    ทั้งหมด
-                </button>
-            `;
-            categories.forEach(cat => {
-                const isActive = currentCategoryFilter === cat.id;
-                html += `
-                    <button onclick="setCategoryFilter('${cat.id}')" class="px-5 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition ${isActive ? 'gold-gradient text-white shadow-md' : 'bg-white text-champagne-800 border border-champagne-200 hover:bg-champagne-100/60'}">
-                        ${cat.name}
-                    </button>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function setCategoryFilter(catId) {
-            currentCategoryFilter = catId;
-            renderCustomerCategories();
-            renderCustomerProducts();
-        }
-
-        function renderCustomerProducts() {
-            const grid = document.getElementById('products-grid');
+        // Categorized Customer View (Displaying Products Grouped By Category)
+        function renderCategorizedCustomerProducts() {
+            const quickNav = document.getElementById('category-quick-nav');
+            const container = document.getElementById('categorized-products-container');
             const noProducts = document.getElementById('no-products');
             const searchQuery = document.getElementById('search-input').value.toLowerCase();
 
-            let filtered = products.filter(p => {
-                const matchesCategory = currentCategoryFilter === 'all' || p.category === currentCategoryFilter;
-                const matchesSearch = p.name.toLowerCase().includes(searchQuery) || (p.description && p.description.toLowerCase().includes(searchQuery));
-                return matchesCategory && matchesSearch;
-            });
-
-            if (filtered.length === 0) {
-                grid.innerHTML = '';
-                noProducts.classList.remove('hidden');
-                return;
-            }
-
-            noProducts.classList.add('hidden');
-            let html = '';
-            filtered.forEach(p => {
-                const catObj = categories.find(c => c.id === p.category);
-                const catName = catObj ? catObj.name : '';
-                html += `
-                    <div onclick="openDetailModal('${p.id}')" class="bg-white rounded-3xl border border-champagne-200/80 overflow-hidden card-hover cursor-pointer flex flex-col justify-between group">
-                        <div>
-                            <div class="relative h-64 sm:h-72 overflow-hidden bg-champagne-100">
-                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-700" onerror="this.src='https://placehold.co/600x400/F7F3EC/4F3A22?text=KHAMWHAN545'">
-                                ${p.badge ? `<span class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-gold text-[11px] font-semibold tracking-wider rounded-full shadow-sm border border-champagne-200">${p.badge}</span>` : ''}
-                            </div>
-                            <div class="p-6 space-y-2">
-                                <span class="text-[10px] text-gold font-medium uppercase tracking-widest block">${catName}</span>
-                                <h4 class="font-luxury text-xl font-normal text-champagne-900 leading-snug group-hover:text-gold transition">${p.name}</h4>
-                                <p class="text-xs text-champagne-600 line-clamp-2 font-light leading-relaxed">${p.description || ''}</p>
-                            </div>
-                        </div>
-                        <div class="p-6 pt-0 flex items-center justify-between border-t border-champagne-100/60 mt-4">
-                            <span class="text-base sm:text-lg font-semibold text-champagne-900">${p.price}</span>
-                            <span class="text-xs font-medium text-gold uppercase tracking-wider inline-flex items-center group-hover:translate-x-1 transition">
-                                รายละเอียด <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
-                            </span>
-                        </div>
-                    </div>
+            // Quick Nav Jump Links
+            let quickNavHtml = '';
+            categories.forEach(cat => {
+                quickNavHtml += `
+                    <a href="#cat-section-${cat.id}" class="px-5 py-2 rounded-full text-xs font-medium uppercase tracking-wider bg-white text-champagne-800 border border-champagne-200 hover:bg-champagne-100 hover:border-gold transition flex-shrink-0 shadow-sm">
+                        ${cat.name}
+                    </a>
                 `;
             });
-            grid.innerHTML = html;
+            quickNav.innerHTML = quickNavHtml;
+
+            let totalVisibleProducts = 0;
+            let containerHtml = '';
+
+            // Group products by category
+            categories.forEach(cat => {
+                const catProducts = products.filter(p => {
+                    const matchesCategory = p.category === cat.id;
+                    const matchesSearch = p.name.toLowerCase().includes(searchQuery) || (p.description && p.description.toLowerCase().includes(searchQuery));
+                    return matchesCategory && matchesSearch;
+                });
+
+                if (catProducts.length > 0) {
+                    totalVisibleProducts += catProducts.length;
+
+                    containerHtml += `
+                        <div id="cat-section-${cat.id}" class="space-y-6 scroll-mt-28">
+                            <div class="flex items-center space-x-3 border-b border-champagne-200/80 pb-3">
+                                <span class="w-2.5 h-2.5 rounded-full gold-gradient"></span>
+                                <h3 class="font-luxury text-2xl sm:text-3xl text-champagne-900 font-medium">${cat.name}</h3>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    `;
+
+                    catProducts.forEach(p => {
+                        containerHtml += `
+                            <div onclick="openDetailModal('${p.id}')" class="luxury-card rounded-3xl border border-champagne-200/70 overflow-hidden cursor-pointer flex flex-col justify-between group">
+                                <div>
+                                    <div class="relative h-64 sm:h-72 overflow-hidden bg-champagne-100">
+                                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-700" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=KHAMWHAN545'">
+                                        ${p.badge ? `<span class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-gold text-[11px] font-semibold tracking-wider rounded-full shadow-sm border border-champagne-200">${p.badge}</span>` : ''}
+                                    </div>
+                                    <div class="p-6 space-y-2">
+                                        <h4 class="font-luxury text-xl font-normal text-champagne-900 leading-snug group-hover:text-gold transition">${p.name}</h4>
+                                        <p class="text-xs text-champagne-600 line-clamp-2 font-light leading-relaxed">${p.description || ''}</p>
+                                    </div>
+                                </div>
+                                <div class="p-6 pt-0 flex items-center justify-between border-t border-champagne-100/60 mt-4">
+                                    <span class="text-base sm:text-lg font-semibold text-champagne-900">${p.price}</span>
+                                    <span class="text-xs font-medium text-gold uppercase tracking-wider inline-flex items-center group-hover:translate-x-1 transition">
+                                        รายละเอียด <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    containerHtml += `
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (totalVisibleProducts === 0) {
+                container.innerHTML = '';
+                noProducts.classList.remove('hidden');
+            } else {
+                noProducts.classList.add('hidden');
+                container.innerHTML = containerHtml;
+            }
         }
 
         function filterItems() {
-            renderCustomerProducts();
+            renderCategorizedCustomerProducts();
         }
 
-        // Detail Modal View
+        // Product Detail Modal View
         function openDetailModal(productId) {
             const p = products.find(item => item.id === productId);
             if (!p) return;
@@ -794,8 +790,8 @@
             const content = `
                 <div>
                     <div class="relative h-72 sm:h-80 bg-champagne-100">
-                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/F7F3EC/4F3A22?text=KHAMWHAN545'">
-                        ${p.badge ? `<span class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-gold text-xs font-semibold tracking-wider rounded-full border border-champagne-200">${p.badge}</span>` : ''}
+                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=KHAMWHAN545'">
+                        ${p.badge ? `<span class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-gold text-xs font-semibold tracking-wider rounded-full border border-champagne-200 shadow-sm">${p.badge}</span>` : ''}
                     </div>
                     <div class="p-6 sm:p-8 space-y-6">
                         <div>
@@ -809,7 +805,7 @@
                         </div>
                         <div class="flex flex-col sm:flex-row gap-3 pt-2">
                             <a href="${storeInfo.contactLink || '#'}" target="_blank" class="flex-1 py-3.5 rounded-full gold-gradient text-white text-center font-medium text-xs uppercase tracking-widest shadow-md hover:opacity-95 transition flex items-center justify-center">
-                                <i class="fa-brands fa-line text-base mr-2"></i> ติดต่อสอบถาม / สั่งซื้อทาง Line
+                                <i class="fa-brands fa-line text-lg mr-2"></i> ติดต่อสอบถาม / สั่งซื้อทาง Line
                             </a>
                         </div>
                     </div>
@@ -876,7 +872,7 @@
                 html += `
                     <tr class="hover:bg-champagne-50/50">
                         <td class="p-4">
-                            <img src="${p.image}" alt="" class="w-12 h-12 rounded-xl object-cover border border-champagne-200" onerror="this.src='https://placehold.co/100x100/F7F3EC/4F3A22?text=Img'">
+                            <img src="${p.image}" alt="" class="w-12 h-12 rounded-xl object-cover border border-champagne-200" onerror="this.src='https://placehold.co/100x100/F4EFE6/473A21?text=Img'">
                         </td>
                         <td class="p-4 font-medium text-champagne-900">
                             ${p.name}
@@ -950,7 +946,7 @@
                 products.push({ id: newId, name, category, price, badge, image, description });
             }
 
-            localStorage.setItem('kh_v2_products', JSON.stringify(products));
+            localStorage.setItem('kh_v3_products', JSON.stringify(products));
             closeProductModal();
             renderAdminProducts();
             showToast('บันทึกรายการสินค้าเรียบร้อย');
@@ -959,12 +955,13 @@
         function deleteProduct(productId) {
             if (confirm('คุณต้องการลบรายการสินค้านี้ใช่หรือไม่?')) {
                 products = products.filter(p => p.id !== productId);
-                localStorage.setItem('kh_v2_products', JSON.stringify(products));
+                localStorage.setItem('kh_v3_products', JSON.stringify(products));
                 renderAdminProducts();
                 showToast('ลบรายการสินค้าเรียบร้อย');
             }
         }
 
+        // Admin Categories Management
         function renderAdminCategories() {
             const tbody = document.getElementById('admin-categories-table');
             let html = '';
@@ -1023,7 +1020,7 @@
                     products.forEach(p => {
                         if (p.category === oldId) p.category = newId;
                     });
-                    localStorage.setItem('kh_v2_products', JSON.stringify(products));
+                    localStorage.setItem('kh_v3_products', JSON.stringify(products));
                 }
             } else {
                 if (categories.some(c => c.id === newId)) {
@@ -1033,7 +1030,7 @@
                 categories.push({ id: newId, name });
             }
 
-            localStorage.setItem('kh_v2_categories', JSON.stringify(categories));
+            localStorage.setItem('kh_v3_categories', JSON.stringify(categories));
             closeCategoryModal();
             renderAdminCategories();
             showToast('บันทึกหมวดหมู่เรียบร้อย');
@@ -1047,8 +1044,8 @@
             if (confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่? สินค้าในหมวดหมู่นี้จะถูกลบออกด้วย')) {
                 categories = categories.filter(c => c.id !== catId);
                 products = products.filter(p => p.category !== catId);
-                localStorage.setItem('kh_v2_categories', JSON.stringify(categories));
-                localStorage.setItem('kh_v2_products', JSON.stringify(products));
+                localStorage.setItem('kh_v3_categories', JSON.stringify(categories));
+                localStorage.setItem('kh_v3_products', JSON.stringify(products));
                 renderAdminCategories();
                 renderAdminProducts();
                 showToast('ลบหมวดหมู่เรียบร้อย');
@@ -1076,7 +1073,7 @@
             storeInfo.contactLink = document.getElementById('admin-store-contactlink').value;
             storeInfo.mapEmbed = document.getElementById('admin-store-map').value;
 
-            localStorage.setItem('kh_v2_storeInfo', JSON.stringify(storeInfo));
+            localStorage.setItem('kh_v3_storeInfo', JSON.stringify(storeInfo));
             renderStoreInfo();
             showToast('บันทึกข้อมูลร้านเรียบร้อยแล้ว');
         }
@@ -1127,7 +1124,7 @@
             }
 
             storeInfo.adminPin = newPin;
-            localStorage.setItem('kh_v2_storeInfo', JSON.stringify(storeInfo));
+            localStorage.setItem('kh_v3_storeInfo', JSON.stringify(storeInfo));
             document.getElementById('pin-form').reset();
             showToast('เปลี่ยนรหัส PIN สำเร็จ');
         }
