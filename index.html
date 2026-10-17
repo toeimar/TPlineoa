@@ -107,6 +107,137 @@
             scrollbar-width: none;
         }
     </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+          apiKey: "AIzaSyBodeNPmVxAutptEKMcF1wQBH5KXs0Coac",
+          authDomain: "khamwhan545-60fa9.firebaseapp.com",
+          projectId: "khamwhan545-60fa9",
+          storageBucket: "khamwhan545-60fa9.firebasestorage.app",
+          messagingSenderId: "639894610082",
+          appId: "1:639894610082:web:7af794d346e37ddf8cb7fb",
+          measurementId: "G-XJKWPS9BGK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'khamwhan545-app';
+        let currentUser = null;
+
+        // Firebase Initialization and Listener Setup
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Firebase Auth Error:", err);
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    setupFirestoreListeners();
+                }
+            });
+        });
+
+        function setupFirestoreListeners() {
+            if (!currentUser) return;
+
+            // Listen to Products Collection
+            const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+            onSnapshot(productsRef, (snapshot) => {
+                if (!snapshot.empty) {
+                    window.products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } else {
+                    // Seed initial default products if empty
+                    window.seedDefaultProducts();
+                }
+                window.renderCategorizedCustomerProducts();
+                if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                    window.renderAdminProducts();
+                }
+            }, (error) => console.error("Products listener error:", error));
+
+            // Listen to Categories Collection
+            const categoriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
+            onSnapshot(categoriesRef, (snapshot) => {
+                if (!snapshot.empty) {
+                    window.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } else {
+                    window.seedDefaultCategories();
+                }
+                window.renderCategorizedCustomerProducts();
+                if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                    window.renderAdminCategories();
+                }
+            }, (error) => console.error("Categories listener error:", error));
+
+            // Listen to Store Info Document
+            const storeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'storeInfo');
+            onSnapshot(storeDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.storeInfo = { ...window.defaultStoreInfo, ...docSnap.data() };
+                } else {
+                    window.saveStoreInfoToFirebase(window.defaultStoreInfo);
+                }
+                window.renderStoreInfo();
+                if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                    window.loadStoreSettingsForm();
+                }
+            }, (error) => console.error("Store info listener error:", error));
+        }
+
+        window.saveProductToFirebase = async function(productData) {
+            if (!currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', productData.id);
+            await setDoc(docRef, productData);
+        };
+
+        window.deleteProductFromFirebase = async function(productId) {
+            if (!currentUser) return;
+            const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', productId);
+            await deleteDoc(docRef);
+        };
+
+        window.saveCategoryToFirebase = async function(categoryData) {
+            if (!currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'categories', categoryData.id);
+            await setDoc(docRef, categoryData);
+        };
+
+        window.deleteCategoryFromFirebase = async function(categoryId) {
+            if (!currentUser) return;
+            const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'categories', categoryId);
+            await deleteDoc(docRef);
+        };
+
+        window.saveStoreInfoToFirebase = async function(storeData) {
+            if (!currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'storeInfo');
+            await setDoc(docRef, storeData);
+        };
+
+        window.seedDefaultProducts = function() {
+            window.defaultProducts.forEach(p => window.saveProductToFirebase(p));
+        };
+
+        window.seedDefaultCategories = function() {
+            window.defaultCategories.forEach(c => window.saveCategoryToFirebase(c));
+        };
+    </script>
 </head>
 <body class="min-h-screen flex flex-col bg-purebg selection:bg-gold selection:text-white antialiased">
 
@@ -529,418 +660,549 @@
                     <input type="text" id="category-id-input" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="cat1">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">ชื่อหมวดหมู่</label>
-                    <input type="text" id="category-name-input" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="เช่น ชุดทำบุญประณีต">
+                    <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">ป้ายกำกับพิเศษ (Optional)</label>
+                    <input type="text" id="product-badge" class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="เช่น ยอดนิยม, พรีเมี่ยม">
                 </div>
-                <div class="pt-4 flex justify-end space-x-3">
-                    <button type="button" onclick="closeCategoryModal()" class="px-5 py-2.5 rounded-full bg-champagne-100 text-champagne-800 text-xs uppercase tracking-wider font-medium hover:bg-champagne-200 transition">ยกเลิก</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-full gold-gradient text-white text-xs uppercase tracking-wider font-medium shadow-xs hover:opacity-95 transition">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Product Detail Modal -->
-    <div id="modal-detail" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs hidden p-4 overflow-y-auto">
-        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-champagne-200 relative overflow-hidden my-8">
-            <button onclick="closeDetailModal()" class="absolute top-4 right-4 z-10 text-champagne-800 hover:text-black w-8 h-8 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-xs shadow-sm transition">
-                <i class="fa-solid fa-xmark text-sm"></i>
-            </button>
-            <div id="detail-modal-content">
-                <!-- Injected via JS -->
             </div>
+
+            <div>
+                <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">รูปภาพสินค้า (URL หรือ อัปโหลดจากเครื่อง)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="product-image" required class="flex-grow px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="https://...">
+                    <button type="button" onclick="document.getElementById('product-file-input').click()" class="px-4 py-2.5 rounded-xl bg-champagne-100 text-champagne-800 hover:bg-champagne-200 text-xs uppercase tracking-wider font-medium flex-shrink-0">
+                        <i class="fa-solid fa-upload mr-1"></i> อัปโหลด
+                    </button>
+                    <input type="file" id="product-file-input" accept="image/*" class="hidden" onchange="handleProductImageUpload(event)">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">รายละเอียดสินค้าเพิ่มเติม</label>
+                <textarea id="product-description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="ส่วนประกอบ หรือความหมายมงคล..."></textarea>
+            </div>
+            <div class="pt-4 flex justify-end space-x-3">
+                <button type="button" onclick="closeProductModal()" class="px-5 py-2.5 rounded-full bg-champagne-100 text-champagne-800 text-xs uppercase tracking-wider font-medium hover:bg-champagne-200 transition">ยกเลิก</button>
+                <button type="submit" class="px-6 py-2.5 rounded-full gold-gradient text-white text-xs uppercase tracking-wider font-medium shadow-xs hover:opacity-95 transition">บันทึกรายการ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Category Form Modal -->
+<div id="modal-category" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs hidden p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-champagne-200 relative">
+        <button onclick="closeCategoryModal()" class="absolute top-4 right-4 text-champagne-400 hover:text-champagne-800 w-8 h-8 rounded-full flex items-center justify-center bg-champagne-50">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 id="category-modal-title" class="font-luxury text-xl sm:text-2xl font-medium text-champagne-900 mb-6">เพิ่ม / แก้ไขหมวดหมู่</h3>
+        <form id="category-form" onsubmit="saveCategory(event)" class="space-y-4">
+            <input type="hidden" id="category-old-id">
+            <div>
+                <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">รหัสหมวดหมู่ (ID เช่น cat1)</label>
+                <input type="text" id="category-id-input" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="cat1">
+            </div>
+            <div>
+                <label class="block text-xs font-medium uppercase tracking-wider text-champagne-800 mb-1">ชื่อหมวดหมู่</label>
+                <input type="text" id="category-name-input" required class="w-full px-4 py-2.5 rounded-xl border border-champagne-200 text-sm focus:outline-none focus:border-gold" placeholder="เช่น ชุดทำบุญประณีต">
+            </div>
+            <div class="pt-4 flex justify-end space-x-3">
+                <button type="button" onclick="closeCategoryModal()" class="px-5 py-2.5 rounded-full bg-champagne-100 text-champagne-800 text-xs uppercase tracking-wider font-medium hover:bg-champagne-200 transition">ยกเลิก</button>
+                <button type="submit" class="px-6 py-2.5 rounded-full gold-gradient text-white text-xs uppercase tracking-wider font-medium shadow-xs hover:opacity-95 transition">บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div id="modal-detail" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs hidden p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-champagne-200 relative overflow-hidden my-8">
+        <button onclick="closeDetailModal()" class="absolute top-4 right-4 z-10 text-champagne-800 hover:text-black w-8 h-8 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-xs shadow-sm transition">
+            <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+        <div id="detail-modal-content">
+            <!-- Injected via JS -->
         </div>
     </div>
+</div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-champagne-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 border border-gold/30">
-        <i id="toast-icon" class="fa-solid fa-circle-check text-gold text-base"></i>
-        <span id="toast-message" class="text-xs sm:text-sm font-medium">บันทึกข้อมูลเรียบร้อยแล้ว</span>
-    </div>
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-champagne-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 border border-gold/30">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-gold text-base"></i>
+    <span id="toast-message" class="text-xs sm:text-sm font-medium">บันทึกข้อมูลเรียบร้อยแล้ว</span>
+</div>
 
-    <script>
-        const defaultLogoData = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="96" fill="%23F4EFE6" stroke="%23C39A4D" stroke-width="4"/><circle cx="100" cy="100" r="88" fill="none" stroke="%23D8C7A7" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M100 35 C115 55 135 60 150 70 C135 85 130 105 100 125 C70 105 65 85 50 70 C65 60 85 55 100 35 Z" fill="none" stroke="%23C39A4D" stroke-width="2"/><circle cx="100" cy="72" r="12" fill="%23C39A4D" opacity="0.3"/><text x="100" y="145" font-family="Niramit, serif" font-size="16" font-weight="bold" fill="%23473A21" text-anchor="middle" letter-spacing="2">KHAMWHAN</text><text x="100" y="165" font-family="Prompt, sans-serif" font-size="14" font-weight="600" fill="%23C39A4D" text-anchor="middle" letter-spacing="4">545</text></svg>';
+<!-- Firebase SDK and Global Firebase State Management -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const defaultCategories = [
-            { id: 'cat1', name: '1. ชุดทำบุญประณีต (ปิ่นโตภัตตาหาร, สังฆทาน, ผ้าไตร, พวงมาลัย, แจกันถวายพระ)' },
-            { id: 'cat2', name: '2. ชุดสักการะบวงสรวง (ศาลหลักเมืองกรุงเทพฯ, องค์พระแก้วมรกต, พระแม่ธรณีบีบมวยผม, พระปรางค์วัดอรุณ)' },
-            { id: 'cat3', name: '3. ชุดของไหว้มงคลในวันสำคัญต่างๆ' },
-            { id: 'cat4', name: '4. ชุดขนมไทยพรีเมี่ยม' },
-            { id: 'cat5', name: '5. จัดงานบุญ' },
-            { id: 'cat6', name: '6. รายการอื่นๆ สามารถฝากถวายได้' }
-        ];
+    const firebaseConfig = {
+      apiKey: "AIzaSyBodeNPmVxAutptEKMcF1wQBH5KXs0Coac",
+      authDomain: "khamwhan545-60fa9.firebaseapp.com",
+      projectId: "khamwhan545-60fa9",
+      storageBucket: "khamwhan545-60fa9.firebasestorage.app",
+      messagingSenderId: "639894610082",
+      appId: "1:639894610082:web:7af794d346e37ddf8cb7fb",
+      measurementId: "G-XJKWPS9BGK"
+    };
 
-        const defaultProducts = [
-            {
-                id: 'p1',
-                name: 'ชุดปิ่นโตภัตตาหารเพลและพวงมาลัยประณีต',
-                category: 'cat1',
-                price: '1,590 บาท',
-                badge: 'ขายดี',
-                image: 'https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&w=800&q=80',
-                description: 'จัดเตรียมภัตตาหารคาว-หวานสดใหม่ พร้อมแจกันดอกไม้สดและพวงมาลัยถวายพระภิกษุสงฆ์ จัดตบแต่งด้วยความประณีตระดับพรีเมี่ยม'
-            },
-            {
-                id: 'p2',
-                name: 'สังฆทานชะลอมพรีเมี่ยม พร้อมผ้าไตรจีวร',
-                category: 'cat1',
-                price: '2,290 บาท',
-                badge: 'แนะนำ',
-                image: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=800&q=80',
-                description: 'ชุดสังฆทานชะลอมจักสานประณีต บรรจุยาสามัญและเครื่องไทยธรรมคุณภาพสูง พร้อมผ้าไตรเนื้อประณีต'
-            },
-            {
-                id: 'p3',
-                name: 'ชุดเครื่องสักการะบวงสรวง ศาลหลักเมืองกรุงเทพฯ',
-                category: 'cat2',
-                price: '1,290 บาท',
-                badge: 'ศักดิ์สิทธิ์',
-                image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=800&q=80',
-                description: 'เครื่องสักการะจัดแต่งถูกต้องตามพิธีการ ประกอบด้วยผ้าแพร 3 สี พวงมาลัยดาวเรือง และเครื่องบวงสรวงครบถ้วน'
-            },
-            {
-                id: 'p4',
-                name: 'ชุดสักการะถวายองค์พระแก้วมรกต & พระแม่ธรณี',
-                category: 'cat2',
-                price: '1,890 บาท',
-                badge: 'พรีเมี่ยม',
-                image: 'https://images.unsplash.com/photo-1590073844006-33379778ae09?auto=format&fit=crop&w=800&q=80',
-                description: 'จัดเตรียมพานดอกไม้สด บายศรี และเครื่องหอมถวายสักการะองค์พระแก้วมรกตและพระแม่ธรณีบีบมวยผม'
-            },
-            {
-                id: 'p5',
-                name: 'ชุดของไหว้มงคลเทศกาลสำคัญ (สารทจีน / ตรุษจีน / งานมงคล)',
-                category: 'cat3',
-                price: '2,500 บาท',
-                badge: 'มงคล',
-                image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
-                description: 'รวมของไหว้มงคลคัดสรรวัตถุดิบเกรดพรีเมี่ยม ประดับตกแต่งชะลอมทอง หรูหราและทรงคุณค่า'
-            },
-            {
-                id: 'p6',
-                name: 'กล่องขนมไทยมงคลพรีเมี่ยม 9 อย่าง (ทองเอก, เสน่ห์จันทน์, จ่ามงกุฎ)',
-                category: 'cat4',
-                price: '1,350 บาท',
-                badge: 'ยอดนิยม',
-                image: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?auto=format&fit=crop&w=800&q=80',
-                description: 'รวมขนมไทยมงคลโบราณ รสชาติอบควันเทียนหอมอ่อนๆ รสสัมผัสประณีต เหมาะสำหรับเป็นของฝากและงานพิธีมงคล'
-            },
-            {
-                id: 'p7',
-                name: 'บริการจัดงานบุญครบวงจร (จัดโต๊ะหมู่บูชา และพิธีสงฆ์)',
-                category: 'cat5',
-                price: 'สอบถามรายละเอียด',
-                badge: 'บริการ',
-                image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80',
-                description: 'บริการดูแลจัดงานบุญตักบาตร งานทำบุญขึ้นบ้านใหม่ งานพิธีสงฆ์ครบวงจรพร้อมทีมงานมืออาชีพ'
-            },
-            {
-                id: 'p8',
-                name: 'น้ำดื่มบรรจุขวดตรา Khamwhan545 (ฝากถวายพระ)',
-                category: 'cat6',
-                price: '120 บาท / แพ็ค',
-                badge: 'ฝากถวาย',
-                image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=800&q=80',
-                description: 'น้ำดื่มสะอาดบรรจุขวดแพ็ค 12 ขวด พร้อมบริการจัดส่งฝากถวายพระภิกษุสงฆ์ ณ วัดที่ระบุ'
-            }
-        ];
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-        const defaultStoreInfo = {
-            name: 'KHAMWHAN545',
-            logo: defaultLogoData,
-            address: '545 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
-            phone: '081-987-6543',
-            line: '@khamwhan545',
-            contactLink: 'https://line.me/R/ti/p/@khamwhan545',
-            mapEmbed: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.803273292415!2d100.570183!3d13.730386!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29ee71be495ad%3A0x2e1a24ac59b020e0!2zNTQ1IOC4luC4meC4meC4quC4uOC4guC4oeC4p-C4tOC4l-C5gOC4hOC4l-C5gOC4m-C4peC4oeC4p-C4tOC4lw!5e0!3m2!1sth!2sth!4v1700000000000!5m2!1sth!2sth',
-            adminPin: '123456'
-        };
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'khamwhan545-app';
+    let currentUser = null;
 
-        let categories = JSON.parse(localStorage.getItem('kh_v3_categories')) || defaultCategories;
-        let products = JSON.parse(localStorage.getItem('kh_v3_products')) || defaultProducts;
-        let storeInfo = JSON.parse(localStorage.getItem('kh_v3_storeInfo')) || defaultStoreInfo;
-        let activeCategoryTarget = null;
-
-        window.onload = function() {
-            renderStoreInfo();
-            renderCategorizedCustomerProducts();
-        };
-
-        function switchView(view) {
-            const customerView = document.getElementById('view-customer');
-            const adminView = document.getElementById('view-admin');
-
-            if (view === 'admin') {
-                const isAdminLoggedIn = sessionStorage.getItem('kh_admin_logged') === 'true';
-                if (!isAdminLoggedIn) {
-                    openAdminLoginModal();
-                    return;
-                }
-                customerView.classList.add('hidden');
-                adminView.classList.remove('hidden');
-                renderAdminProducts();
-                renderAdminCategories();
-                loadStoreSettingsForm();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
             } else {
-                customerView.classList.remove('hidden');
-                adminView.classList.add('hidden');
-                renderStoreInfo();
-                renderCategorizedCustomerProducts();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                await signInAnonymously(auth);
             }
+        } catch (err) {
+            console.error("Firebase Auth Error:", err);
         }
 
-        function renderStoreInfo() {
-            document.getElementById('nav-brand-name').innerText = storeInfo.name;
-            if (storeInfo.logo) {
-                document.getElementById('nav-logo').src = storeInfo.logo;
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                setupFirestoreListeners();
             }
-            document.getElementById('info-address').innerText = storeInfo.address;
-            document.getElementById('info-phone').innerText = storeInfo.phone;
-            document.getElementById('info-line').innerText = storeInfo.line;
-            document.getElementById('contact-link-btn').href = storeInfo.contactLink || '#';
-            if (storeInfo.mapEmbed) {
-                document.getElementById('info-map-iframe').src = storeInfo.mapEmbed;
-            }
-        }
+        });
+    });
 
-        function scrollToCategory(catId, btnElement) {
-            activeCategoryTarget = catId;
+    function setupFirestoreListeners() {
+        if (!currentUser) return;
+
+        // Sync Products
+        const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+        onSnapshot(productsRef, (snapshot) => {
+            if (!snapshot.empty) {
+                window.products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } else {
+                window.seedDefaultProducts();
+            }
+            window.renderCategorizedCustomerProducts();
+            if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                window.renderAdminProducts();
+            }
+        });
+
+        // Sync Categories
+        const categoriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
+        onSnapshot(categoriesRef, (snapshot) => {
+            if (!snapshot.empty) {
+                window.categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } else {
+                window.seedDefaultCategories();
+            }
+            window.renderCategorizedCustomerProducts();
+            if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                window.renderAdminCategories();
+            }
+        });
+
+        // Sync Store Settings
+        const storeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'storeInfo');
+        onSnapshot(storeDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.storeInfo = { ...window.defaultStoreInfo, ...docSnap.data() };
+            } else {
+                window.saveStoreInfoToFirebase(window.defaultStoreInfo);
+            }
+            window.renderStoreInfo();
+            if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                window.loadStoreSettingsForm();
+            }
+        });
+    }
+
+    window.saveProductToFirebase = async function(productData) {
+        if (!currentUser) return;
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', productData.id);
+        await setDoc(docRef, productData);
+    };
+
+    window.deleteProductFromFirebase = async function(productId) {
+        if (!currentUser) return;
+        const docRef = doc(doc(db, 'artifacts', appId, 'public', 'data', 'products', productId));
+        await deleteDoc(docRef);
+    };
+
+    window.saveCategoryToFirebase = async function(categoryData) {
+        if (!currentUser) return;
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'categories', categoryData.id);
+        await setDoc(docRef, categoryData);
+    };
+
+    window.deleteCategoryFromFirebase = async function(categoryId) {
+        if (!currentUser) return;
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'categories', categoryId);
+        await deleteDoc(docRef);
+    };
+
+    window.saveStoreInfoToFirebase = async function(storeData) {
+        if (!currentUser) return;
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'storeInfo');
+        await setDoc(docRef, storeData);
+    };
+
+    window.seedDefaultProducts = function() {
+        window.defaultProducts.forEach(p => window.saveProductToFirebase(p));
+    };
+
+    window.seedDefaultCategories = function() {
+        window.defaultCategories.forEach(c => window.saveCategoryToFirebase(c));
+    };
+</script>
+
+<!-- Application Core Logic and UI Controller -->
+<script>
+    const defaultLogoData = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="96" fill="%23F4EFE6" stroke="%23C39A4D" stroke-width="4"/><circle cx="100" cy="100" r="88" fill="none" stroke="%23D8C7A7" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M100 35 C115 55 135 60 150 70 C135 85 130 105 100 125 C70 105 65 85 50 70 C65 60 85 55 100 35 Z" fill="none" stroke="%23C39A4D" stroke-width="2"/><circle cx="100" cy="72" r="12" fill="%23C39A4D" opacity="0.3"/><text x="100" y="145" font-family="Niramit, serif" font-size="16" font-weight="bold" fill="%23473A21" text-anchor="middle" letter-spacing="2">KHAMWHAN</text><text x="100" y="165" font-family="Prompt, sans-serif" font-size="14" font-weight="600" fill="%23C39A4D" text-anchor="middle" letter-spacing="4">545</text></svg>';
+
+    const defaultCategories = [
+        { id: 'cat1', name: '1. ชุดทำบุญประณีต (ปิ่นโตภัตตาหาร, สังฆทาน, ผ้าไตร, พวงมาลัย, แจกันถวายพระ)' },
+        { id: 'cat2', name: '2. ชุดสักการะบวงสรวง (ศาลหลักเมืองกรุงเทพฯ, องค์พระแก้วมรกต, พระแม่ธรณีบีบมวยผม, พระปรางค์วัดอรุณ)' },
+        { id: 'cat3', name: '3. ชุดของไหว้มงคลในวันสำคัญต่างๆ' },
+        { id: 'cat4', name: '4. ชุดขนมไทยพรีเมี่ยม' },
+        { id: 'cat5', name: '5. จัดงานบุญ' },
+        { id: 'cat6', name: '6. รายการอื่นๆ สามารถฝากถวายได้' }
+    ];
+
+    const defaultProducts = [
+        {
+            id: 'p1',
+            name: 'ชุดปิ่นโตภัตตาหารเพลและพวงมาลัยประณีต',
+            category: 'cat1',
+            price: '1,590 บาท',
+            badge: 'ขายดี',
+            image: 'https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&w=800&q=80',
+            description: 'จัดเตรียมภัตตาหารคาว-หวานสดใหม่ พร้อมแจกันดอกไม้สดและพวงมาลัยถวายพระภิกษุสงฆ์ จัดตบแต่งด้วยความประณีตระดับพรีเมี่ยม'
+        },
+        {
+            id: 'p2',
+            name: 'สังฆทานชะลอมพรีเมี่ยม พร้อมผ้าไตรจีวร',
+            category: 'cat1',
+            price: '2,290 บาท',
+            badge: 'แนะนำ',
+            image: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=800&q=80',
+            description: 'ชุดสังฆทานชะลอมจักสานประณีต บรรจุยาสามัญและเครื่องไทยธรรมคุณภาพสูง พร้อมผ้าไตรเนื้อประณีต'
+        },
+        {
+            id: 'p3',
+            name: 'ชุดเครื่องสักการะบวงสรวง ศาลหลักเมืองกรุงเทพฯ',
+            category: 'cat2',
+            price: '1,290 บาท',
+            badge: 'ศักดิ์สิทธิ์',
+            image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=800&q=80',
+            description: 'เครื่องสักการะจัดแต่งถูกต้องตามพิธีการ ประกอบด้วยผ้าแพร 3 สี พวงมาลัยดาวเรือง และเครื่องบวงสรวงครบถ้วน'
+        },
+        {
+            id: 'p4',
+            name: 'ชุดสักการะถวายองค์พระแก้วมรกต & พระแม่ธรณี',
+            category: 'cat2',
+            price: '1,890 บาท',
+            badge: 'พรีเมี่ยม',
+            image: 'https://images.unsplash.com/photo-1590073844006-33379778ae09?auto=format&fit=crop&w=800&q=80',
+            description: 'จัดเตรียมพานดอกไม้สด บายศรี และเครื่องหอมถวายสักการะองค์พระแก้วมรกตและพระแม่ธรณีบีบมวยผม'
+        },
+        {
+            id: 'p5',
+            name: 'ชุดของไหว้มงคลเทศกาลสำคัญ (สารทจีน / ตรุษจีน / งานมงคล)',
+            category: 'cat3',
+            price: '2,500 บาท',
+            badge: 'มงคล',
+            image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
+            description: 'รวมของไหว้มงคลคัดสรรวัตถุดิบเกรดพรีเมี่ยม ประดับตกแต่งชะลอมทอง หรูหราและทรงคุณค่า'
+        },
+        {
+            id: 'p6',
+            name: 'กล่องขนมไทยมงคลพรีเมี่ยม 9 อย่าง (ทองเอก, เสน่ห์จันทน์, จ่ามงกุฎ)',
+            category: 'cat4',
+            price: '1,350 บาท',
+            badge: 'ยอดนิยม',
+            image: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?auto=format&fit=crop&w=800&q=80',
+            description: 'รวมขนมไทยมงคลโบราณ รสชาติอบควันเทียนหอมอ่อนๆ รสสัมผัสประณีต เหมาะสำหรับเป็นของฝากและงานพิธีมงคล'
+        },
+        {
+            id: 'p7',
+            name: 'บริการจัดงานบุญครบวงจร (จัดโต๊ะหมู่บูชา และพิธีสงฆ์)',
+            category: 'cat5',
+            price: 'สอบถามรายละเอียด',
+            badge: 'บริการ',
+            image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80',
+            description: 'บริการดูแลจัดงานบุญตักบาตร งานทำบุญขึ้นบ้านใหม่ งานพิธีสงฆ์ครบวงจรพร้อมทีมงานมืออาชีพ'
+        },
+        {
+            id: 'p8',
+            name: 'น้ำดื่มบรรจุขวดตรา Khamwhan545 (ฝากถวายพระ)',
+            category: 'cat6',
+            price: '120 บาท / แพ็ค',
+            badge: 'ฝากถวาย',
+            image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=800&q=80',
+            description: 'น้ำดื่มสะอาดบรรจุขวดแพ็ค 12 ขวด พร้อมบริการจัดส่งฝากถวายพระภิกษุสงฆ์ ณ วัดที่ระบุ'
+        }
+    ];
+
+    const defaultStoreInfo = {
+        name: 'KHAMWHAN545',
+        logo: defaultLogoData,
+        address: '545 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
+        phone: '081-987-6543',
+        line: '@khamwhan545',
+        contactLink: 'https://line.me/R/ti/p/@khamwhan545',
+        mapEmbed: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.803273292415!2d100.570183!3d13.730386!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29ee71be495ad%3A0x2e1a24ac59b020e0!2zNTQ1IOC4luC4meC4meC4quC4uOC4guC4oeC4p-C4tOC4l-C5gOC4hOC4l-C5gOC4m-C4peC4oeC4p-C4tOC4lw!5e0!3m2!1sth!2sth!4v1700000000000!5m2!1sth!2sth',
+        adminPin: '123456'
+    };
+
+    let categories = JSON.parse(localStorage.getItem('kh_v3_categories')) || defaultCategories;
+    let products = JSON.parse(localStorage.getItem('kh_v3_products')) || defaultProducts;
+    let storeInfo = JSON.parse(localStorage.getItem('kh_v3_storeInfo')) || defaultStoreInfo;
+    let activeCategoryTarget = null;
+
+    window.defaultCategories = defaultCategories;
+    window.defaultProducts = defaultProducts;
+    window.defaultStoreInfo = defaultStoreInfo;
+
+    window.onload = function() {
+        renderStoreInfo();
+        renderCategorizedCustomerProducts();
+    };
+
+    function renderStoreInfo() {
+        document.getElementById('nav-brand-name').innerText = storeInfo.name || 'KHAMWHAN545';
+        document.getElementById('nav-logo').src = storeInfo.logo || defaultLogoData;
+        document.getElementById('info-address').innerText = storeInfo.address || '-';
+        document.getElementById('info-phone').innerText = storeInfo.phone || '-';
+        document.getElementById('info-line').innerText = storeInfo.line || '-';
+        document.getElementById('contact-link-btn').href = storeInfo.contactLink || '#';
+        if (storeInfo.mapEmbed) {
+            document.getElementById('info-map-iframe').src = storeInfo.mapEmbed;
+        }
+    }
+
+    function renderCategorizedCustomerProducts() {
+        const navContainer = document.getElementById('category-quick-nav');
+        const productsContainer = document.getElementById('categorized-products-container');
+
+        // Render Quick Nav Pills
+        let navHtml = `<button onclick="scrollToCategory('all')" class="category-pill ${activeCategoryTarget === null ? 'active-pill' : ''} px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0">ทั้งหมด</button>`;
+        categories.forEach(cat => {
+            const isActive = activeCategoryTarget === cat.id;
+            navHtml += `<button onclick="scrollToCategory('${cat.id}')" class="category-pill ${isActive ? 'active-pill' : ''} px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0">${cat.name}</button>`;
+        });
+        navContainer.innerHTML = navHtml;
+
+        // Render Products grouped by Category
+        let mainContentHtml = '';
+        let totalItemsFound = 0;
+        const searchQuery = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+
+        categories.forEach(cat => {
+            const catProducts = products.filter(p => p.category === cat.id && (p.name.toLowerCase().includes(searchQuery) || p.description.toLowerCase().includes(searchQuery)));
             
-            // Update active styling on category buttons
-            const buttons = document.querySelectorAll('.category-pill');
-            buttons.forEach(btn => btn.classList.remove('active-pill'));
-            if (btnElement) {
-                btnElement.classList.add('active-pill');
-            }
+            if (catProducts.length > 0) {
+                totalItemsFound += catProducts.length;
+                mainContentHtml += `
+                    <div id="category-block-${cat.id}" class="space-y-4 sm:space-y-6 pt-2">
+                        <div class="flex items-center space-x-3 border-l-4 border-gold pl-3 sm:pl-4">
+                            <h4 class="font-luxury text-lg sm:text-2xl text-champagne-900 font-semibold">${cat.name}</h4>
+                            <span class="text-xs text-champagne-500 bg-champagne-100 px-2.5 py-0.5 rounded-full font-light">(${catProducts.length})</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                `;
 
-            const element = document.getElementById(`cat-section-${catId}`);
+                catProducts.forEach(prod => {
+                    mainContentHtml += `
+                        <div class="luxury-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer" onclick="openDetailModal('${prod.id}')">
+                            <div>
+                                <div class="relative h-44 sm:h-52 overflow-hidden bg-champagne-100">
+                                    <img src="${prod.image}" alt="${prod.name}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=Khamwhan545'">
+                                    ${prod.badge ? `<span class="absolute top-3 right-3 gold-gradient text-white text-[10px] uppercase font-semibold tracking-wider px-3 py-1 rounded-full shadow-xs">${prod.badge}</span>` : ''}
+                                </div>
+                                <div class="p-4 sm:p-5 space-y-2">
+                                    <h5 class="font-luxury text-base sm:text-lg text-champagne-900 font-medium line-clamp-1">${prod.name}</h5>
+                                    <p class="text-xs text-champagne-600 font-light line-clamp-2 leading-relaxed">${prod.description || ''}</p>
+                                </div>
+                            </div>
+                            <div class="p-4 sm:p-5 pt-0 flex justify-between items-center mt-2 border-t border-champagne-100/60">
+                                <span class="text-sm sm:text-base font-semibold text-gold">${prod.price}</span>
+                                <span class="text-[11px] text-champagne-700 bg-champagne-100 hover:bg-champagne-200 px-3 py-1.5 rounded-full transition font-medium inline-flex items-center">
+                                    รายละเอียด <i class="fa-solid fa-chevron-right text-[9px] ml-1.5 opacity-70"></i>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                mainContentHtml += `</div></div>`;
+            }
+        });
+
+        productsContainer.innerHTML = mainContentHtml;
+        const noProductsEl = document.getElementById('no-products');
+        if (totalItemsFound === 0) {
+            noProductsEl.classList.remove('hidden');
+        } else {
+            noProductsEl.classList.add('hidden');
+        }
+    }
+
+    function scrollToCategory(catId) {
+        activeCategoryTarget = catId === 'all' ? null : catId;
+        renderCategorizedCustomerProducts();
+        if (catId !== 'all') {
+            const element = document.getElementById(`category-block-${catId}`);
             if (element) {
-                const headerOffset = 80;
-                const elementPosition = element.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
+    }
 
-        function renderCategorizedCustomerProducts() {
-            const quickNav = document.getElementById('category-quick-nav');
-            const container = document.getElementById('categorized-products-container');
-            const noProducts = document.getElementById('no-products');
-            const searchInput = document.getElementById('search-input');
-            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    function filterItems() {
+        renderCategorizedCustomerProducts();
+    }
 
-            let quickNavHtml = '';
-            categories.forEach((cat) => {
-                const isActive = activeCategoryTarget === cat.id ? 'active-pill' : '';
-                quickNavHtml += `
-                    <button onclick="scrollToCategory('${cat.id}', this)" class="category-pill ${isActive} px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-medium tracking-wide whitespace-nowrap flex-shrink-0 flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full gold-gradient shadow-2xs"></span>
-                        <span>${cat.name}</span>
-                    </button>
-                `;
-            });
-            if (quickNav) quickNav.innerHTML = quickNavHtml;
+    function openDetailModal(productId) {
+        const prod = products.find(p => p.id === productId);
+        if (!prod) return;
 
-            let totalVisibleProducts = 0;
-            let containerHtml = '';
-
-            categories.forEach(cat => {
-                const catProducts = products.filter(p => {
-                    const matchesCategory = p.category === cat.id;
-                    const nameMatch = p.name ? p.name.toLowerCase().includes(searchQuery) : false;
-                    const descMatch = p.description ? p.description.toLowerCase().includes(searchQuery) : false;
-                    const priceMatch = p.price ? p.price.toLowerCase().includes(searchQuery) : false;
-                    const badgeMatch = p.badge ? p.badge.toLowerCase().includes(searchQuery) : false;
-                    
-                    const matchesSearch = searchQuery === '' || nameMatch || descMatch || priceMatch || badgeMatch;
-                    return matchesCategory && matchesSearch;
-                });
-
-                if (catProducts.length > 0) {
-                    totalVisibleProducts += catProducts.length;
-
-                    containerHtml += `
-                        <div id="cat-section-${cat.id}" class="space-y-3 sm:space-y-6 scroll-mt-20">
-                            <div class="flex items-center space-x-2 border-b border-champagne-200/50 pb-2">
-                                <span class="w-2 h-2 rounded-full gold-gradient"></span>
-                                <h3 class="font-luxury text-base sm:text-2xl text-champagne-900 font-medium">${cat.name}</h3>
-                            </div>
-                            <!-- 2-column Grid on Mobile, 3-column on Desktop -->
-                            <div class="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
-                    `;
-
-                    catProducts.forEach(p => {
-                        containerHtml += `
-                            <div onclick="openDetailModal('${p.id}')" class="luxury-card rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer flex flex-col justify-between group">
-                                <div>
-                                    <div class="relative h-36 sm:h-64 overflow-hidden bg-champagne-50">
-                                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-700" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=KHAMWHAN545'">
-                                        ${p.badge ? `<span class="absolute top-2 left-2 px-2 py-0.5 bg-white/95 backdrop-blur-xs text-gold text-[9px] sm:text-[10px] font-medium tracking-wider rounded-full shadow-2xs border border-champagne-200/80">${p.badge}</span>` : ''}
-                                    </div>
-                                    <div class="p-2.5 sm:p-5 space-y-1">
-                                        <h4 class="font-luxury text-xs sm:text-lg font-normal text-champagne-900 leading-snug group-hover:text-gold transition line-clamp-2">${p.name}</h4>
-                                        <p class="text-[10px] sm:text-xs text-champagne-600 line-clamp-2 font-light leading-relaxed hidden sm:block">${p.description || ''}</p>
-                                    </div>
-                                </div>
-                                <div class="p-2.5 sm:p-5 pt-0 flex flex-col sm:flex-row sm:items-center justify-between border-t border-champagne-100/60 mt-1.5 gap-1">
-                                    <span class="text-xs sm:text-sm font-semibold text-champagne-900">${p.price}</span>
-                                    <span class="text-[10px] sm:text-[11px] font-medium text-gold uppercase tracking-wider inline-flex items-center group-hover:translate-x-0.5 transition">
-                                        รายละเอียด <i class="fa-solid fa-angle-right ml-1 text-[8px] sm:text-[10px]"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    containerHtml += `
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-
-            if (totalVisibleProducts === 0) {
-                if (container) container.innerHTML = '';
-                if (noProducts) noProducts.classList.remove('hidden');
-            } else {
-                if (noProducts) noProducts.classList.add('hidden');
-                if (container) container.innerHTML = containerHtml;
-            }
-        }
-
-        function filterItems() {
-            renderCategorizedCustomerProducts();
-        }
-
-        function openDetailModal(productId) {
-            const p = products.find(item => item.id === productId);
-            if (!p) return;
-            const catObj = categories.find(c => c.id === p.category);
-            const catName = catObj ? catObj.name : '';
-
-            const content = `
+        const content = document.getElementById('detail-modal-content');
+        content.innerHTML = `
+            <div class="relative h-64 sm:h-72 bg-champagne-100 overflow-hidden">
+                <img src="${prod.image}" alt="${prod.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=Khamwhan545'">
+                ${prod.badge ? `<span class="absolute top-4 left-4 gold-gradient text-white text-xs font-semibold tracking-wider px-3 py-1 rounded-full shadow-md">${prod.badge}</span>` : ''}
+            </div>
+            <div class="p-6 sm:p-8 space-y-4">
                 <div>
-                    <div class="relative h-56 sm:h-72 bg-champagne-50">
-                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/F4EFE6/473A21?text=KHAMWHAN545'">
-                        ${p.badge ? `<span class="absolute top-3 left-3 px-3 py-1 bg-white/95 backdrop-blur-xs text-gold text-xs font-semibold tracking-wider rounded-full border border-champagne-200 shadow-2xs">${p.badge}</span>` : ''}
-                    </div>
-                    <div class="p-4 sm:p-7 space-y-4 sm:space-y-5">
-                        <div>
-                            <span class="text-[9px] sm:text-[10px] text-gold font-medium uppercase tracking-widest">${catName}</span>
-                            <h3 class="font-luxury text-lg sm:text-2xl font-medium text-champagne-900 mt-0.5">${p.name}</h3>
-                            <div class="text-sm sm:text-lg font-bold text-champagne-800 mt-1">${p.price}</div>
-                        </div>
-                        <div class="space-y-1.5 border-t border-b border-champagne-100/80 py-3">
-                            <h4 class="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold text-champagne-800">รายละเอียดเพิ่มเติม</h4>
-                            <p class="text-xs sm:text-sm text-champagne-700 leading-relaxed font-light">${p.description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
-                        </div>
-                        <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
-                            <a href="${storeInfo.contactLink || '#'}" target="_blank" class="flex-1 py-2.5 sm:py-3 rounded-full gold-gradient text-white text-center font-medium text-xs uppercase tracking-widest shadow-xs hover:opacity-95 transition flex items-center justify-center">
-                                <i class="fa-brands fa-line text-base mr-2"></i> ติดต่อสอบถาม / สั่งซื้อทาง Line
-                            </a>
-                        </div>
-                    </div>
+                    <h3 class="font-luxury text-xl sm:text-2xl text-champagne-900 font-medium leading-snug">${prod.name}</h3>
+                    <p class="text-lg font-semibold text-gold mt-1">${prod.price}</p>
                 </div>
-            `;
-            document.getElementById('detail-modal-content').innerHTML = content;
-            document.getElementById('modal-detail').classList.remove('hidden');
-        }
+                <p class="text-xs sm:text-sm text-champagne-700 leading-relaxed font-light">${prod.description || 'ไม่มีรายละเอียดสินค้า'}</p>
+                <div class="pt-4">
+                    <a href="${storeInfo.contactLink || '#'}" target="_blank" class="w-full py-3 rounded-full gold-gradient text-white font-medium text-xs uppercase tracking-widest shadow-xs hover:opacity-95 transition flex items-center justify-center">
+                        <i class="fa-brands fa-line text-base mr-2"></i> สั่งซื้อผ่าน Line Official
+                    </a>
+                </div>
+            </div>
+        `;
+        document.getElementById('modal-detail').classList.remove('hidden');
+    }
 
-        function closeDetailModal() {
-            document.getElementById('modal-detail').classList.add('hidden');
-        }
+    function closeDetailModal() {
+        document.getElementById('modal-detail').classList.add('hidden');
+    }
 
-        function openAdminLoginModal() {
-            document.getElementById('login-pin-input').value = '';
-            document.getElementById('login-error').classList.add('hidden');
-            document.getElementById('modal-admin-login').classList.remove('hidden');
+    function switchView(viewName) {
+        if (viewName === 'admin') {
+            document.getElementById('view-customer').classList.add('hidden');
+            document.getElementById('view-admin').classList.remove('hidden');
+            renderAdminProducts();
+        } else {
+            document.getElementById('view-customer').classList.remove('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
         }
+    }
 
-        function closeAdminLoginModal() {
-            document.getElementById('modal-admin-login').classList.add('hidden');
+    function openAdminLoginModal() {
+        document.getElementById('login-pin-input').value = '';
+        document.getElementById('login-error').classList.add('hidden');
+        document.getElementById('modal-admin-login').classList.remove('hidden');
+    }
+
+    function closeAdminLoginModal() {
+        document.getElementById('modal-admin-login').classList.add('hidden');
+    }
+
+    function handleAdminLogin(event) {
+        event.preventDefault();
+        const pin = document.getElementById('login-pin-input').value;
+        if (pin === storeInfo.adminPin) {
+            closeAdminLoginModal();
+            switchView('admin');
+        } else {
+            document.getElementById('login-error').classList.remove('hidden');
         }
+    }
 
-        function handleAdminLogin(event) {
-            event.preventDefault();
-            const pin = document.getElementById('login-pin-input').value;
-            if (pin === storeInfo.adminPin) {
-                sessionStorage.setItem('kh_admin_logged', 'true');
-                closeAdminLoginModal();
-                switchView('admin');
-                showToast('เข้าสู่ระบบ Admin สำเร็จ');
+    function adminLogout() {
+        switchView('customer');
+        showToast('ออกจากระบบ Admin เรียบร้อย');
+    }
+
+    function switchAdminTab(tabName) {
+        ['products', 'categories', 'store', 'settings'].forEach(t => {
+            const btn = document.getElementById(`admin-tab-${t}`);
+            const content = document.getElementById(`admin-content-${t}`);
+            if (t === tabName) {
+                btn.className = "px-5 sm:px-6 py-3 font-medium text-xs uppercase tracking-wider border-b-2 border-gold text-champagne-900 whitespace-nowrap";
+                content.classList.remove('hidden');
             } else {
-                document.getElementById('login-error').classList.remove('hidden');
+                btn.className = "px-5 sm:px-6 py-3 font-medium text-xs uppercase tracking-wider border-b-2 border-transparent text-champagne-600 hover:text-champagne-900 whitespace-nowrap";
+                content.classList.add('hidden');
             }
-        }
+        });
 
-        function adminLogout() {
-            sessionStorage.removeItem('kh_admin_logged');
-            switchView('customer');
-            showToast('ออกจากระบบเรียบร้อย');
-        }
+        if (tabName === 'products') renderAdminProducts();
+        if (tabName === 'categories') renderAdminCategories();
+        if (tabName === 'store') loadStoreSettingsForm();
+    }
 
-        function switchAdminTab(tabName) {
-            ['products', 'categories', 'store', 'settings'].forEach(t => {
-                document.getElementById(`admin-content-${t}`).classList.add('hidden');
-                document.getElementById(`admin-tab-${t}`).className = 'px-5 sm:px-6 py-3 font-medium text-xs uppercase tracking-wider border-b-2 border-transparent text-champagne-600 hover:text-champagne-900 whitespace-nowrap';
-            });
-            document.getElementById(`admin-content-${tabName}`).classList.remove('hidden');
-            document.getElementById(`admin-tab-${tabName}`).className = 'px-5 sm:px-6 py-3 font-medium text-xs uppercase tracking-wider border-b-2 border-gold text-champagne-900 whitespace-nowrap';
-        }
+    function renderAdminProducts() {
+        const tbody = document.getElementById('admin-products-table');
+        tbody.innerHTML = products.map(p => {
+            const cat = categories.find(c => c.id === p.category);
+            return `
+                <tr class="hover:bg-champagne-50/50 transition">
+                    <td class="p-4">
+                        <img src="${p.image}" class="w-12 h-12 rounded-xl object-cover bg-champagne-100" onerror="this.src='https://placehold.co/200x200/F4EFE6/473A21?text=Khamwhan545'">
+                    </td>
+                    <td class="p-4 font-medium text-champagne-900">${p.name}</td>
+                    <td class="p-4 text-champagne-600">${cat ? cat.name : p.category}</td>
+                    <td class="p-4 font-semibold text-gold">${p.price}</td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick="editProduct('${p.id}')" class="px-3 py-1.5 rounded-lg bg-champagne-100 text-champagne-800 hover:bg-champagne-200 transition text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteProduct('${p.id}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition text-xs"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
 
-        function renderAdminProducts() {
-            const tbody = document.getElementById('admin-products-table');
-            if (products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-champagne-500">ยังไม่มีรายการสินค้า</td></tr>`;
-                return;
-            }
-            let html = '';
-            products.forEach(p => {
-                const catObj = categories.find(c => c.id === p.category);
-                const catName = catObj ? catObj.name : 'ไม่ระบุหมวดหมู่';
-                html += `
-                    <tr class="hover:bg-champagne-50/50">
-                        <td class="p-4">
-                            <img src="${p.image}" alt="" class="w-12 h-12 rounded-xl object-cover border border-champagne-200" onerror="this.src='https://placehold.co/100x100/F4EFE6/473A21?text=Img'">
-                        </td>
-                        <td class="p-4 font-medium text-champagne-900">
-                            ${p.name}
-                            ${p.badge ? `<span class="ml-2 px-2 py-0.5 bg-champagne-100 text-gold text-[10px] rounded-full">${p.badge}</span>` : ''}
-                        </td>
-                        <td class="p-4 text-champagne-600 text-xs">${catName}</td>
-                        <td class="p-4 font-semibold text-champagne-800">${p.price}</td>
-                        <td class="p-4 text-center space-x-2">
-                            <button onclick="openProductModal('${p.id}')" class="p-2 text-champagne-600 hover:text-gold transition" title="แก้ไข">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteProduct('${p.id}')" class="p-2 text-red-400 hover:text-red-600 transition" title="ลบ">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
-        }
+    function renderAdminCategories() {
+        const tbody = document.getElementById('admin-categories-table');
+        tbody.innerHTML = categories.map((c, index) => `
+            <tr class="hover:bg-champagne-50/50 transition">
+                <td class="p-4 text-champagne-500 font-light">${index + 1}</td>
+                <td class="p-4 font-medium text-champagne-900">${c.name}</td>
+                <td class="p-4 text-champagne-600 font-mono text-xs">${c.id}</td>
+                <td class="p-4 text-center space-x-2">
+                    <button onclick="editCategory('${c.id}')" class="px-3 py-1.5 rounded-lg bg-champagne-100 text-champagne-800 hover:bg-champagne-200 transition text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button onclick="deleteCategory('${c.id}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition text-xs"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
 
-        function openProductModal(productId = null) {
-            const select = document.getElementById('product-category');
-            let opts = '';
-            categories.forEach(c => {
-                opts += `<option value="${c.id}">${c.name}</option>`;
-            });
-            select.innerHTML = opts;
+    function loadStoreSettingsForm() {
+        document.getElementById('admin-store-name').value = storeInfo.name || '';
+        document.getElementById('admin-store-logo').value = storeInfo.logo || '';
+        document.getElementById('admin-store-address').value = storeInfo.address || '';
+        document.getElementById('admin-store-phone').value = storeInfo.phone || '';
+        document.getElementById('admin-store-line').value = storeInfo.line || '';
+        document.getElementById('admin-store-contactlink').value = storeInfo.contactLink || '';
+        document.getElementById('admin-store-map').value = storeInfo.mapEmbed || '';
+    }
 
-            if (productId) {
-                const p = products.find(item => item.id === productId);
-                if (!p) return;
-                document.getElementById('product-modal-title').innerText = 'แก้ไขรายการสินค้า';
+    function openProductModal(productId = null) {
+        const select = document.getElementById('product-category');
+        select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+        if (productId) {
+            const p = products.find(item => item.id === productId);
+            if (p) {
                 document.getElementById('product-id').value = p.id;
                 document.getElementById('product-name').value = p.name;
                 document.getElementById('product-category').value = p.category;
@@ -948,225 +1210,91 @@
                 document.getElementById('product-badge').value = p.badge || '';
                 document.getElementById('product-image').value = p.image;
                 document.getElementById('product-description').value = p.description || '';
-            } else {
-                document.getElementById('product-modal-title').innerText = 'เพิ่มรายการสินค้าใหม่';
-                document.getElementById('product-form').reset();
-                document.getElementById('product-id').value = '';
             }
-            document.getElementById('modal-product').classList.remove('hidden');
+        } else {
+            document.getElementById('product-form').reset();
+            document.getElementById('product-id').value = '';
         }
+        document.getElementById('modal-product').classList.remove('hidden');
+    }
 
-        function closeProductModal() {
-            document.getElementById('modal-product').classList.add('hidden');
-        }
+    function closeProductModal() {
+        document.getElementById('modal-product').classList.add('hidden');
+    }
 
-        function saveProduct(event) {
-            event.preventDefault();
-            const id = document.getElementById('product-id').value;
-            const name = document.getElementById('product-name').value;
-            const category = document.getElementById('product-category').value;
-            const price = document.getElementById('product-price').value;
-            const badge = document.getElementById('product-badge').value;
-            const image = document.getElementById('product-image').value;
-            const description = document.getElementById('product-description').value;
+    function editProduct(productId) {
+        openProductModal(productId);
+    }
 
-            if (id) {
-                const index = products.findIndex(item => item.id === id);
-                if (index !== -1) {
-                    products[index] = { id, name, category, price, badge, image, description };
-                }
-            } else {
-                const newId = 'p_' + Date.now();
-                products.push({ id: newId, name, category, price, badge, image, description });
-            }
-
-            localStorage.setItem('kh_v3_products', JSON.stringify(products));
-            closeProductModal();
-            renderAdminProducts();
-            showToast('บันทึกรายการสินค้าเรียบร้อย');
-        }
-
-        function deleteProduct(productId) {
-            if (confirm('คุณต้องการลบรายการสินค้านี้ใช่หรือไม่?')) {
-                products = products.filter(p => p.id !== productId);
-                localStorage.setItem('kh_v3_products', JSON.stringify(products));
-                renderAdminProducts();
-                showToast('ลบรายการสินค้าเรียบร้อย');
-            }
-        }
-
-        function renderAdminCategories() {
-            const tbody = document.getElementById('admin-categories-table');
-            let html = '';
-            categories.forEach((c, idx) => {
-                html += `
-                    <tr class="hover:bg-champagne-50/50">
-                        <td class="p-4 font-semibold text-champagne-800">${idx + 1}</td>
-                        <td class="p-4 font-medium text-champagne-900">${c.name}</td>
-                        <td class="p-4 text-xs font-mono text-champagne-600">${c.id}</td>
-                        <td class="p-4 text-center space-x-2">
-                            <button onclick="openCategoryModal('${c.id}')" class="p-2 text-champagne-600 hover:text-gold transition" title="แก้ไข">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteCategory('${c.id}')" class="p-2 text-red-400 hover:text-red-600 transition" title="ลบ">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
-        }
-
-        function openCategoryModal(catId = null) {
-            if (catId) {
-                const c = categories.find(item => item.id === catId);
-                if (!c) return;
-                document.getElementById('category-modal-title').innerText = 'แก้ไขหมวดหมู่';
+    function openCategoryModal(categoryId = null) {
+        if (categoryId) {
+            const c = categories.find(item => item.id === categoryId);
+            if (c) {
                 document.getElementById('category-old-id').value = c.id;
                 document.getElementById('category-id-input').value = c.id;
                 document.getElementById('category-name-input').value = c.name;
-            } else {
-                document.getElementById('category-modal-title').innerText = 'เพิ่มหมวดหมู่ใหม่';
-                document.getElementById('category-form').reset();
-                document.getElementById('category-old-id').value = '';
             }
-            document.getElementById('modal-category').classList.remove('hidden');
+        } else {
+            document.getElementById('category-form').reset();
+            document.getElementById('category-old-id').value = '';
         }
+        document.getElementById('modal-category').classList.remove('hidden');
+    }
 
-        function closeCategoryModal() {
-            document.getElementById('modal-category').classList.add('hidden');
+    function closeCategoryModal() {
+        document.getElementById('modal-category').classList.add('hidden');
+    }
+
+    function editCategory(categoryId) {
+        openCategoryModal(categoryId);
+    }
+
+    function handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('admin-store-logo').value = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
+    }
 
-        function saveCategory(event) {
-            event.preventDefault();
-            const oldId = document.getElementById('category-old-id').value;
-            const newId = document.getElementById('category-id-input').value.trim();
-            const name = document.getElementById('category-name-input').value.trim();
-
-            if (oldId) {
-                const index = categories.findIndex(item => item.id === oldId);
-                if (index !== -1) {
-                    categories[index] = { id: newId, name };
-                }
-                if (oldId !== newId) {
-                    products.forEach(p => {
-                        if (p.category === oldId) p.category = newId;
-                    });
-                    localStorage.setItem('kh_v3_products', JSON.stringify(products));
-                }
-            } else {
-                if (categories.some(c => c.id === newId)) {
-                    alert('รหัสหมวดหมู่นี้มีอยู่แล้ว');
-                    return;
-                }
-                categories.push({ id: newId, name });
-            }
-
-            localStorage.setItem('kh_v3_categories', JSON.stringify(categories));
-            closeCategoryModal();
-            renderAdminCategories();
-            showToast('บันทึกหมวดหมู่เรียบร้อย');
+    function handleProductImageUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('product-image').value = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
+    }
 
-        function deleteCategory(catId) {
-            if (categories.length <= 1) {
-                alert('ต้องมีอย่างน้อย 1 หมวดหมู่');
-                return;
-            }
-            if (confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่? สินค้าในหมวดหมู่นี้จะถูกลบออกด้วย')) {
-                categories = categories.filter(c => c.id !== catId);
-                products = products.filter(p => p.category !== catId);
-                localStorage.setItem('kh_v3_categories', JSON.stringify(categories));
-                localStorage.setItem('kh_v3_products', JSON.stringify(products));
-                renderAdminCategories();
-                renderAdminProducts();
-                showToast('ลบหมวดหมู่เรียบร้อย');
-            }
-        }
-
-        function loadStoreSettingsForm() {
-            document.getElementById('admin-store-name').value = storeInfo.name;
-            document.getElementById('admin-store-logo').value = storeInfo.logo;
-            document.getElementById('admin-store-address').value = storeInfo.address;
-            document.getElementById('admin-store-phone').value = storeInfo.phone;
-            document.getElementById('admin-store-line').value = storeInfo.line;
-            document.getElementById('admin-store-contactlink').value = storeInfo.contactLink || '';
-            document.getElementById('admin-store-map').value = storeInfo.mapEmbed;
-        }
-
-        function saveStoreSettings(event) {
-            event.preventDefault();
-            storeInfo.name = document.getElementById('admin-store-name').value;
-            storeInfo.logo = document.getElementById('admin-store-logo').value;
-            storeInfo.address = document.getElementById('admin-store-address').value;
-            storeInfo.phone = document.getElementById('admin-store-phone').value;
-            storeInfo.line = document.getElementById('admin-store-line').value;
-            storeInfo.contactLink = document.getElementById('admin-store-contactlink').value;
-            storeInfo.mapEmbed = document.getElementById('admin-store-map').value;
-
-            localStorage.setItem('kh_v3_storeInfo', JSON.stringify(storeInfo));
-            renderStoreInfo();
-            showToast('บันทึกข้อมูลร้านเรียบร้อยแล้ว');
-        }
-
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('admin-store-logo').value = e.target.result;
-                    showToast('อัปโหลดโลโก้สำเร็จ');
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function handleProductImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('product-image').value = e.target.result;
-                    showToast('อัปโหลดรูปภาพสำเร็จ');
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function changeAdminPin(event) {
-            event.preventDefault();
-            const current = document.getElementById('current-pin').value;
-            const newPin = document.getElementById('new-pin').value;
-            const confirmNew = document.getElementById('confirm-pin').value;
-
-            if (current !== storeInfo.adminPin) {
-                alert('รหัส PIN ปัจจุบันไม่ถูกต้อง');
-                return;
-            }
-            if (newPin.length !== 6 || isNaN(newPin)) {
-                alert('รหัส PIN ใหม่ต้องเป็นตัวเลข 6 หลัก');
-                return;
-            }
-            if (newPin !== confirmNew) {
-                alert('รหัส PIN ใหม่และการยืนยันไม่ตรงกัน');
-                return;
-            }
-
-            storeInfo.adminPin = newPin;
-            localStorage.setItem('kh_v3_storeInfo', JSON.stringify(storeInfo));
-            document.getElementById('pin-form').reset();
-            showToast('เปลี่ยนรหัส PIN สำเร็จ');
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-message').innerText = message;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-    </script>
+    window.saveProduct = saveProduct;
+    window.deleteProduct = deleteProduct;
+    window.saveCategory = saveCategory;
+    window.deleteCategory = deleteCategory;
+    window.saveStoreSettings = saveStoreSettings;
+    window.changeAdminPin = changeAdminPin;
+    window.switchView = switchView;
+    window.openAdminLoginModal = openAdminLoginModal;
+    window.closeAdminLoginModal = closeAdminLoginModal;
+    window.handleAdminLogin = handleAdminLogin;
+    window.adminLogout = adminLogout;
+    window.switchAdminTab = switchAdminTab;
+    window.openProductModal = openProductModal;
+    window.closeProductModal = closeProductModal;
+    window.editProduct = editProduct;
+    window.openCategoryModal = openCategoryModal;
+    window.closeCategoryModal = closeCategoryModal;
+    window.editCategory = editCategory;
+    window.openDetailModal = openDetailModal;
+    window.closeDetailModal = closeDetailModal;
+    window.handleLogoUpload = handleLogoUpload;
+    window.handleProductImageUpload = handleProductImageUpload;
+    window.scrollToCategory = scrollToCategory;
+    window.filterItems = filterItems;
+</script>
 </body>
 </html>
